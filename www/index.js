@@ -12,7 +12,7 @@ const ALIVE_COLOR = "#000000";
 // Construct the universe with a given width and height
 const width = 100;
 const height = 100;
-const universe = Universe.new(width, height);
+const universe = Universe.new_rand(width, height);
 
 // Give the canvas room for the cells and a 1px border around each
 const canvas = document.getElementById("game-of-life-canvas");
@@ -63,9 +63,9 @@ const drawCells = () => {
         for (let col = 0; col < width; col++) {
             const idx = getIndex(row, col);
 
-            ctx.fillStyle = bitIsSet(idx, CSSFontFeatureValuesRule) 
-                ? DEAD_COLOR
-                : ALIVE_COLOR;
+            ctx.fillStyle = bitIsSet(idx, cells) 
+                ? ALIVE_COLOR
+                : DEAD_COLOR;
             
             ctx.fillRect(
                 col * CELL_BORDER + 1,

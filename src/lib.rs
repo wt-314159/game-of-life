@@ -1,5 +1,6 @@
 mod utils;
 
+extern crate js_sys;
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 use wasm_bindgen::prelude::*;
@@ -62,12 +63,38 @@ impl Universe {
         }
     }
 
+    pub fn new_rand(width: u32, height: u32) -> Universe {
+        let size = (width * height) as usize;
+        let mut cells = FixedBitSet::with_capacity(size);
+
+        for i in 0..size{
+            let state = js_sys::Math::random() < 0.5;
+            cells.set(i, state);
+        }
+
+        Universe {
+            width,
+            height,
+            cells
+        }
+    }
+
     pub fn width(&self) -> u32 {
         self.width
     }
 
+    pub fn set_width(&mut self, width: u32) {
+        self.width = width;
+        self.cells = FixedBitSet::with_capacity((width * self.height) as usize);
+    } 
+
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    pub fn set_height(&mut self, height: u32) {
+        self.height = height;
+        self.cells = FixedBitSet::with_capacity((self.width * height) as usize);
     }
 
     pub fn cells(&self) -> *const usize {
@@ -101,6 +128,22 @@ impl Universe {
 
     pub fn render(&self) -> String {
         self.to_string()
+    }
+}
+
+// Public methods not exposed to JavaScript
+impl Universe {
+    // Get all the cells in the universe
+    pub fn get_cells(&self) -> &FixedBitSet {
+        &self.cells
+    }
+
+    // Set cells to be alive by passing row and col
+    pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
+        for (row, col) in cells.iter().cloned() {
+            let idx = self.get_index(row, col);
+            self.cells.set(idx, true);
+        }
     }
 }
 
