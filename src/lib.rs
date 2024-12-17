@@ -1,5 +1,7 @@
 mod utils;
 
+extern crate fixedbitset;
+use fixedbitset::FixedBitSet;
 use wasm_bindgen::prelude::*;
 use std::fmt;
 
@@ -15,7 +17,7 @@ pub enum Cell {
 pub struct Universe {
     width: u32,
     height: u32,
-    cells: Vec<Cell>,
+    cells: FixedBitSet,
 }
 
 impl Universe {
@@ -46,15 +48,12 @@ impl Universe {
 #[wasm_bindgen]
 impl Universe {
     pub fn new(width: u32, height: u32) -> Universe {
-        let cells = (0..width * height)
-            .map(|i| {
-                if i % 2 == 0 || i % 7 == 0 {
-                    Cell::Alive
-                }
-                else {
-                    Cell::Dead
-                }
-            }).collect();
+        let size = (width * height) as usize;
+        let mut cells = FixedBitSet::with_capacity(size);
+
+        for i in 0..size {
+            cells.set(i, i % 2 == 0 || i % 7 == 0);
+        }
         
         Universe {
             width,
@@ -71,8 +70,8 @@ impl Universe {
         self.height
     }
 
-    pub fn cells(&self) -> *const Cell {
-        self.cells.as_ptr()
+    pub fn cells(&self) -> *const usize {
+        self.cells.as_slice().as_ptr()
     }
 
     pub fn tick(&mut self) {
@@ -84,20 +83,16 @@ impl Universe {
                 let cell = self.cells[idx];
                 let live_neighbours = self.live_neighbour_count(row, col);
                 
-                let next_cell = match (cell, live_neighbours) {
+                next.set(idx, match(cell, live_neighbours) {
                     // Live cells with less than 2 neighbours die, underpopulation
-                    (Cell::Alive, x) if x < 2 => Cell::Dead,
-                    // Live cells with 2 or 3 neighbours remain alive
-                    (Cell::Alive, 2) | (Cell::Alive, 3) => Cell::Alive,
+                    (true, x) if x < 2 => false,
                     // Live cells with more than 3 neighbours die, overpopulation
-                    (Cell::Alive, x) if x > 3 => Cell::Dead,
+                    (true, x) if x > 3 => false,
                     // Dead cells with 3 neighbours become alive, reproduction
-                    (Cell::Dead, 3) => Cell::Alive,
+                    (false, 3) => true,
                     // All other cells remain in same state
-                    (otherwise, _) => otherwise 
-                };
-
-                next[idx] = next_cell;
+                    (other, _) => other
+                });
             }
         }
 
@@ -111,9 +106,10 @@ impl Universe {
 
 impl fmt::Display for Universe {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for line in self.cells.as_slice().chunks(self.width as usize) {
-            for &cell in line {
-                let symbol = if cell == Cell::Dead { '◻' } else { '◼' };
+        for row in 0..self.height {
+            for col in 0..self.width {
+                let idx = self.get_index(row, col);
+                let symbol = if self.cells[idx] { '◼' } else { '◻' };
                 write!(f, "{}", symbol)?;
             }
             write!(f, "\n")?;
