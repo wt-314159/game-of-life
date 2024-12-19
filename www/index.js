@@ -12,9 +12,10 @@ const ALIVE_COLOR = "#000000";
 // Construct the universe with a given width and height
 const width = 88;
 const height = 88;
-const universe = Universe.new_rand(width, height);
+let universe = Universe.new_rand(width, height);
 
 const playPauseButton = document.getElementById("play-pause");
+const resetButton = document.getElementById("reset");
 // Give the canvas room for the cells and a 1px border around each
 const canvas = document.getElementById("game-of-life-canvas");
 canvas.height = (CELL_SIZE + 1) * height + 1;
@@ -137,5 +138,14 @@ canvas.addEventListener("click", event => {
     drawGrid();
     drawCells();
 });
+
+// Event listener for reset button
+resetButton.addEventListener("click", event => {
+    universe = Universe.new_rand(width, height);
+
+    // Redraw the scene, in case we're currently paused
+    drawGrid();
+    drawCells();
+})
 
 play();
