@@ -244,6 +244,13 @@ impl Pattern {
             (14,4), (14,5), (14,6), (14,10), (14,11), (14,12),]);
         pattern
     }
+
+    pub fn pentadecathlon() -> Pattern {
+        let mut pattern = Pattern::new_plain(11, 18);
+        pattern.set_cells(
+            &[(4,5), (5,5), (6,4), (6,6), (7,5), (8,5), (9,5), (10,5), (11,4), (11,6), (12,5), (13,5)]);
+        pattern
+    }
     // ------------------------------------------
 
     // Constructor methods for simple spaceships 
@@ -277,6 +284,65 @@ impl Pattern {
         pattern
      }
     // -----------------------------------------
+
+    // Constructor methods for methuselah patterns
+    // -------------------------------------------
+    pub fn r_pentomino() -> Pattern {
+        let mut pattern = Pattern::new_plain(5, 5);
+        pattern.set_cells(&[(1,2), (1,3), (2,1), (2,2), (3,2)]);
+        pattern
+    }
+
+    pub fn diehard() -> Pattern {
+        let mut pattern = Pattern::new_plain(10, 5);
+        pattern.set_cells(&[(1,7), (2,1), (2,2), (3,2), (3,6), (3,7), (3,8)]);
+        pattern
+    }
+    // -------------------------------------------
+
+    // Constructor methods for glider gun patterns
+    // -------------------------------------------
+    pub fn gosper_glider_gun() -> Pattern {
+        let mut pattern = Pattern::new_plain(38, 11);
+        pattern.set_cells(&[
+            (1,25), (2,23), (2,25), (3,13), (3,14), (3,21), (3,22), (3,35), (3,36),
+            (4,12), (4,16), (4,21), (4,22), (4,35), (4,36), (5,1), (5,2), (5,11),
+            (5,17), (5,21), (5,22), (6,1), (6,2), (6,11), (6,15), (6,17), (6,18),
+            (6,23), (6,25), (7,11), (7,17), (7,25), (8,12), (8,16), (9,13), (9,14)
+        ]);
+        pattern
+    }
+    // -------------------------------------------
+
+    // Constructor methods for block laying engines
+    // --------------------------------------------
+    pub fn minimal_block_engine() -> Pattern {
+        let mut pattern = Pattern:: new_plain(10, 8);
+        pattern.set_cells(
+            &[(1,7), (2,5), (2,7), (2,8), (3,5), (3,7), (4,5), (5,3), (6,1), (6,3)]);
+        pattern
+    }
+
+    pub fn small_block_engine() -> Pattern {
+        let mut pattern = Pattern::new_plain(7,7);
+        pattern.set_cells(&[
+            (1,1), (1,2), (1,3), (1,5), (2,1), (3,4), 
+            (3,5), (4,2), (4,3), (4,5), (5,1), (5,3), (5,5)
+        ]);
+        pattern
+    }
+
+    pub fn linear_engine() -> Pattern {
+        let mut pattern = Pattern::new_plain(41, 3);
+        pattern.set_cells(&[
+            (1,1), (1,2), (1,3), (1,4), (1,5), (1,6), (1,7), (1,8),
+            (1,10), (1,11), (1,12), (1,13), (1,14), (1,18), (1,19),
+            (1,20), (1,27), (1,28), (1,29), (1,30), (1,31), (1,32),
+            (1,33), (1,35), (1,36), (1,37), (1,38), (1,39)
+        ]);
+        pattern
+    }
+    // --------------------------------------------
 }
 
 // Public methods not exposed to JavaScript

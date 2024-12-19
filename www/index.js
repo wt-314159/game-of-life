@@ -3,15 +3,15 @@ import { Universe, Cell, Pattern } from "game-of-life";
 import { memory } from "game-of-life/game_of_life_bg";
 
 // constants for cell pixel size and cell colors
-const CELL_SIZE = 6;
+const CELL_SIZE = 3;
 const CELL_BORDER = CELL_SIZE + 1;
 const GRID_COLOR = "#CCCCCC";
 const DEAD_COLOR = "#FFFFFF";
 const ALIVE_COLOR = "#000000";
 
 // Construct the universe with a given width and height
-const width = 88;
-const height = 88;
+const width = 160;
+const height = 160;
 let universe = Universe.new_rand(width, height);
 let pattern = null;
 
@@ -20,6 +20,7 @@ const stepButton = document.getElementById("step");
 const resetButton = document.getElementById("reset");
 const clearButton = document.getElementById("clear");
 const patternSelect = document.getElementById("pattern");
+const rotation = document.getElementById("rotation");
 // Give the canvas room for the cells and a 1px border around each
 const canvas = document.getElementById("game-of-life-canvas");
 canvas.height = (CELL_SIZE + 1) * height + 1;
@@ -153,32 +154,54 @@ clearButton.addEventListener("click", event => {
 })
 
 patternSelect.addEventListener("change", event => {
-    if (patternSelect.value == "cell") {
-        pattern = null;
-    } 
-    else if (patternSelect.value == "blinker") {
-        pattern = Pattern.blinker();
-    }
-    else if (patternSelect.value == "toad") {
-        pattern = Pattern.toad();
-    }
-    else if (patternSelect.value == "beacon") {
-        pattern = Pattern.beacon();
-    }
-    else if (patternSelect.value == "pulsar") {
-        pattern = Pattern.pulsar();
-    }
-    else if (patternSelect.value == "glider") {
-        pattern = Pattern.glider();
-    }
-    else if (patternSelect.value == "lwss") {
-        pattern = Pattern.lightweight_spaceship();
-    }
-    else if (patternSelect.value == "mwss") {
-        pattern = Pattern.midweight_spaceship();
-    }
-    else if (patternSelect.value == "hwss") {
-        pattern = Pattern.heavyweight_spaceship();
+    switch (patternSelect.value) {
+        case "blinker":
+            pattern = Pattern.blinker();
+            break;
+        case "toad":
+            pattern = Pattern.toad();
+            break;
+        case "beacon":
+            pattern = Pattern.beacon();
+            break;
+        case "pulsar":
+            pattern = Pattern.pulsar();
+            break;
+        case "pentadeca":
+            pattern = Pattern.pentadecathlon();
+            break;
+        case "glider":
+            pattern = Pattern.glider();
+            break;
+        case "lwss":
+            pattern = Pattern.lightweight_spaceship();
+            break;
+        case "mwss":
+            pattern = Pattern.midweight_spaceship();
+            break;
+        case "hwss":
+            pattern = Pattern.heavyweight_spaceship();
+            break;
+        case "r_pent":
+            pattern = Pattern.r_pentomino();
+            break;
+        case "diehard":
+            pattern = Pattern.diehard();
+            break;
+        case "gosp_gun":
+            pattern = Pattern.gosper_glider_gun();
+            break;
+        case "min_engine":
+            pattern = Pattern.minimal_block_engine();
+            break;
+        case "small_engine":
+            pattern = Pattern.small_block_engine();
+            break;
+        case "lin_engine":
+            pattern = Pattern.linear_engine();
+            break;
+        default:
+            pattern = null;
     }
 });
 
@@ -195,6 +218,7 @@ canvas.addEventListener("click", event => {
     const row = Math.min(Math.floor(canvasTop / CELL_BORDER), height - 1);
     const col = Math.min(Math.floor(canvasLeft / CELL_BORDER), height - 1);
 
+    let angle = parseInt(rotation.value);
     if (pattern == null){
         universe.toggle_cell(row, col);
     } else {
