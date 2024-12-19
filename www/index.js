@@ -15,6 +15,7 @@ const height = 88;
 let universe = Universe.new_rand(width, height);
 
 const playPauseButton = document.getElementById("play-pause");
+const stepButton = document.getElementById("step");
 const resetButton = document.getElementById("reset");
 const clearButton = document.getElementById("clear");
 // Give the canvas room for the cells and a 1px border around each
@@ -25,6 +26,7 @@ canvas.width = (CELL_SIZE + 1) * height + 1;
 const ctx = canvas.getContext('2d');
 let animationId = null;
 
+// Render loop, runs each frame
 const renderLoop = () => {
     debugger;
     universe.tick();
@@ -120,6 +122,16 @@ playPauseButton.addEventListener("click", event => {
         pause();
     }
 });
+
+// Event listener for step button
+stepButton.addEventListener("click", event => {
+    if (isPaused()) {
+        universe.tick();
+
+        drawGrid();
+        drawCells();
+    }
+})
 
 // Event listener for reset button
 resetButton.addEventListener("click", event => {
