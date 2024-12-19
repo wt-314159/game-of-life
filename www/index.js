@@ -16,6 +16,7 @@ let universe = Universe.new_rand(width, height);
 
 const playPauseButton = document.getElementById("play-pause");
 const resetButton = document.getElementById("reset");
+const clearButton = document.getElementById("clear");
 // Give the canvas room for the cells and a 1px border around each
 const canvas = document.getElementById("game-of-life-canvas");
 canvas.height = (CELL_SIZE + 1) * height + 1;
@@ -108,7 +109,10 @@ const pause = () => {
     cancelAnimationFrame(animationId);
     animationId = null;
 };
+// ----------------------------------------
 
+// Event listeners for buttons and canvas
+// --------------------------------------
 playPauseButton.addEventListener("click", event => {
     if (isPaused()) {
         play();
@@ -116,7 +120,24 @@ playPauseButton.addEventListener("click", event => {
         pause();
     }
 });
-// ----------------------------------------
+
+// Event listener for reset button
+resetButton.addEventListener("click", event => {
+    universe = Universe.new_rand(width, height);
+
+    // Redraw the scene, in case we're currently paused
+    drawGrid();
+    drawCells();
+})
+
+// Event listener for clear button
+clearButton.addEventListener("click", event => {
+    universe = Universe.new(width, height);
+
+    // Redraw the scene, in case we're currently paused
+    drawGrid();
+    drawCells();
+})
 
 // Event listener for canvas, to toggle cells
 canvas.addEventListener("click", event => {
@@ -139,13 +160,6 @@ canvas.addEventListener("click", event => {
     drawCells();
 });
 
-// Event listener for reset button
-resetButton.addEventListener("click", event => {
-    universe = Universe.new_rand(width, height);
-
-    // Redraw the scene, in case we're currently paused
-    drawGrid();
-    drawCells();
-})
+// --------------------------------------
 
 play();
