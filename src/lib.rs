@@ -211,6 +211,20 @@ impl Pattern {
         }
         pattern
     }
+
+    pub fn new_beacon() -> Pattern {
+        let mut pattern = Pattern::new_plain(6, 6);
+
+        for r in 0..2 {
+            let offset = r * 2;
+            for i in 1..=2 {
+                for j in 1..=2 {
+                    pattern.toggle_cell(i + offset, j + offset);
+                }
+            }
+        }
+        pattern
+    }
 }
 
 // Public methods not exposed to JavaScript

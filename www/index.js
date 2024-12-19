@@ -13,12 +13,13 @@ const ALIVE_COLOR = "#000000";
 const width = 88;
 const height = 88;
 let universe = Universe.new_rand(width, height);
-let pattern = Pattern.new_toad();
+let pattern = null;
 
 const playPauseButton = document.getElementById("play-pause");
 const stepButton = document.getElementById("step");
 const resetButton = document.getElementById("reset");
 const clearButton = document.getElementById("clear");
+const patternDropdown = document.getElementById("pattern");
 // Give the canvas room for the cells and a 1px border around each
 const canvas = document.getElementById("game-of-life-canvas");
 canvas.height = (CELL_SIZE + 1) * height + 1;
@@ -150,6 +151,21 @@ clearButton.addEventListener("click", event => {
     drawGrid();
     drawCells();
 })
+
+patternDropdown.addEventListener("change", event => {
+    if (patternDropdown.value == "cell") {
+        pattern = null;
+    } 
+    else if (patternDropdown.value == "blinker") {
+        pattern = Pattern.new_blinker();
+    }
+    else if (patternDropdown.value == "toad") {
+        pattern = Pattern.new_toad();
+    }
+    else if (patternDropdown.value == "beacon") {
+        pattern = Pattern.new_beacon();
+    }
+});
 
 // Event listener for canvas, to toggle cells
 canvas.addEventListener("click", event => {
