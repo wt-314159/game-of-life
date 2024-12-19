@@ -21,6 +21,12 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 fixedbitset = "0.5.7"
 js-sys = "0.3.76"
 
+[dependencies.web-sys]
+version = "0.3.76"
+features = [
+    "console",
+]
+
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"
 

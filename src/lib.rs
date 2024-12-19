@@ -1,10 +1,18 @@
 mod utils;
 
 extern crate js_sys;
+extern crate web_sys;
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 use wasm_bindgen::prelude::*;
 use std::fmt;
+
+// A macro to provide console logging syntax
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        web_sys::console::log_1(&format!( $( $t)* ).into());
+    }
+}
 
 #[wasm_bindgen]
 #[repr(u8)]
@@ -49,6 +57,16 @@ impl Universe {
 #[wasm_bindgen]
 impl Universe {
     pub fn new(width: u32, height: u32) -> Universe {
+        // Enable logging for panics
+        utils::set_panic_hook();
+        let size = (width * height) as usize;
+        let cells = FixedBitSet::with_capacity(size);
+        Universe { width, height, cells }
+    }
+
+    pub fn new_pattern(width: u32, height: u32) -> Universe {
+        // Enable logging for panics
+        utils::set_panic_hook();
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
 
@@ -64,6 +82,8 @@ impl Universe {
     }
 
     pub fn new_rand(width: u32, height: u32) -> Universe {
+        // Enable logging for panics
+        utils::set_panic_hook();
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
 

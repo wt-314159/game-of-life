@@ -22,6 +22,7 @@ canvas.width = (CELL_SIZE + 1) * height + 1;
 const ctx = canvas.getContext('2d');
 
 const renderLoop = () => {
+    debugger;
     drawGrid();
     drawCells();
 
