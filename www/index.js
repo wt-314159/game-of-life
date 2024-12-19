@@ -10,27 +10,31 @@ const DEAD_COLOR = "#FFFFFF";
 const ALIVE_COLOR = "#000000";
 
 // Construct the universe with a given width and height
-const width = 100;
-const height = 100;
+const width = 88;
+const height = 88;
 const universe = Universe.new_rand(width, height);
 
+const playPauseButton = document.getElementById("play-pause");
 // Give the canvas room for the cells and a 1px border around each
 const canvas = document.getElementById("game-of-life-canvas");
 canvas.height = (CELL_SIZE + 1) * height + 1;
 canvas.width = (CELL_SIZE + 1) * height + 1;
 
 const ctx = canvas.getContext('2d');
+let animationId = null;
 
 const renderLoop = () => {
     debugger;
+    universe.tick();
+
     drawGrid();
     drawCells();
 
-    universe.tick();
+    animationId = requestAnimationFrame(renderLoop);
+};
 
-    requestAnimationFrame(renderLoop);
-}
-
+// Methods for drawing the grid and cells to the canvas
+// ----------------------------------------------------
 const drawGrid = () => {
     ctx.beginPath();
     ctx.strokeStyle = GRID_COLOR;
@@ -48,11 +52,11 @@ const drawGrid = () => {
     }
 
     ctx.stroke();
-}
+};
 
 const getIndex = (row, column) => {
     return row * width + column;
-}
+};
 
 const drawCells = () => {
     const cellsPtr = universe.cells();
@@ -78,12 +82,60 @@ const drawCells = () => {
     }
 
     ctx.stroke();
-}
+};
+// ----------------------------------------------------
 
 const bitIsSet = (n, arr) => {
     const byte = Math.floor(n / 8);
     const mask = 1 << (n % 8);
     return (arr[byte] & mask) === mask;
-}
+};
 
-requestAnimationFrame(renderLoop);
+// Methods for play and pause functionality
+// ----------------------------------------
+const isPaused = () => {
+    return animationId === null;
+};
+
+const play = () => {
+    playPauseButton.textContent = "⏸︎";
+    renderLoop();
+};
+
+const pause = () => {
+    playPauseButton.textContent = "▶";
+    cancelAnimationFrame(animationId);
+    animationId = null;
+};
+
+playPauseButton.addEventListener("click", event => {
+    if (isPaused()) {
+        play();
+    } else {
+        pause();
+    }
+});
+// ----------------------------------------
+
+// Event listener for canvas, to toggle cells
+canvas.addEventListener("click", event => {
+    const boundingRect = canvas.getBoundingClientRect();
+    // Convert the page relative click coordinates to canvas relative
+    const scaleX = canvas.width / boundingRect.width;
+    const scaleY = canvas.height / boundingRect.height;
+
+    const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
+    const canvasTop = (event.clientY - boundingRect.top) * scaleY;
+    // Get the row and column from the canvas relative coordinates
+    const row = Math.min(Math.floor(canvasTop / CELL_BORDER), height - 1);
+    const col = Math.min(Math.floor(canvasLeft / CELL_BORDER), height - 1);
+
+    universe.toggle_cell(row, col);
+
+    // Redraw the scene (most likely we will be toggling cells when the game is paused,
+    // so they wouldn't be redrawn until the game was running again otherwise)
+    drawGrid();
+    drawCells();
+});
+
+play();
