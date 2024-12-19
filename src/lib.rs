@@ -5,7 +5,10 @@ extern crate web_sys;
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 use wasm_bindgen::prelude::*;
-use std::fmt;
+use std:: {
+    cmp:: { max, min },
+    fmt
+};
 
 // A macro to provide console logging syntax
 macro_rules! log {
@@ -28,6 +31,13 @@ pub struct Universe {
     height: u32,
     cells: FixedBitSet,
 }
+
+// Pattern struct to hold various patterns we might want
+// to add to our universe. Use type aliasing as Patterns
+// need essentially the exact same fields as Universe, 
+// but we don't want constructor methods for Patterns to
+// be accessible under Universe type
+type Pattern = Universe;
 
 impl Universe {
     fn get_index(&self, row: u32, column: u32) -> usize {
@@ -151,8 +161,55 @@ impl Universe {
         self.cells.toggle(idx);
     }
 
+    pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32) {
+        let max_row = min(row + pattern.width, self.width) - row;
+        let max_col = min(column + pattern.height, self.height) - column;
+
+        for r in 0..max_row {
+            let u_row = r + row;
+            for c in 0..max_col {
+                let u_col = c + column;
+                let u_idx = self.get_index(u_row, u_col);
+                let p_idx = pattern.get_index(r, c);
+                self.cells.set(u_idx, pattern.cells[p_idx]);
+            } 
+        }
+    }
+
     pub fn render(&self) -> String {
         self.to_string()
+    }
+}
+
+// Patterns to create
+#[wasm_bindgen]
+impl Pattern {
+    fn new_plain(width: u32, height: u32) -> Pattern {
+        let size = (width * height) as usize;
+        let cells = FixedBitSet::with_capacity(size);
+        Pattern { width, height, cells }
+    }
+
+    pub fn new_blinker() -> Pattern {
+        let mut pattern = Pattern::new_plain(5, 5);
+
+        for i in 1..=3 {
+            pattern.toggle_cell(2, i);
+        }
+        pattern
+    }
+
+    pub fn new_toad() -> Pattern {
+        let mut pattern = Pattern::new_plain(6, 6);
+
+        let mut offset = 0;
+        for i in 2..=3 {
+            for j in 2..=4 {
+                pattern.toggle_cell(i, j - offset);
+            }
+            offset = 1;
+        }
+        pattern
     }
 }
 

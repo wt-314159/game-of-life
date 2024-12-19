@@ -1,4 +1,4 @@
-import { Universe, Cell } from "game-of-life";
+import { Universe, Cell, Pattern } from "game-of-life";
 // Import the WebAssembly memory
 import { memory } from "game-of-life/game_of_life_bg";
 
@@ -13,6 +13,7 @@ const ALIVE_COLOR = "#000000";
 const width = 88;
 const height = 88;
 let universe = Universe.new_rand(width, height);
+let pattern = Pattern.new_toad();
 
 const playPauseButton = document.getElementById("play-pause");
 const stepButton = document.getElementById("step");
@@ -28,7 +29,6 @@ let animationId = null;
 
 // Render loop, runs each frame
 const renderLoop = () => {
-    debugger;
     universe.tick();
 
     drawGrid();
@@ -164,7 +164,11 @@ canvas.addEventListener("click", event => {
     const row = Math.min(Math.floor(canvasTop / CELL_BORDER), height - 1);
     const col = Math.min(Math.floor(canvasLeft / CELL_BORDER), height - 1);
 
-    universe.toggle_cell(row, col);
+    if (pattern == null){
+        universe.toggle_cell(row, col);
+    } else {
+        universe.insert_pattern(pattern, row, col);
+    }
 
     // Redraw the scene (most likely we will be toggling cells when the game is paused,
     // so they wouldn't be redrawn until the game was running again otherwise)
