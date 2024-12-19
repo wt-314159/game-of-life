@@ -162,8 +162,8 @@ impl Universe {
     }
 
     pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32) {
-        let max_row = min(row + pattern.width, self.width) - row;
-        let max_col = min(column + pattern.height, self.height) - column;
+        let max_row = min(row + pattern.height, self.height) - row;
+        let max_col = min(column + pattern.width, self.width) - column;
 
         for r in 0..max_row {
             let u_row = r + row;
@@ -258,7 +258,22 @@ impl Pattern {
      pub fn lightweight_spaceship() -> Pattern {
         let mut pattern = Pattern::new_plain(7, 6);
 
-        pattern.set_cells(&[(1,1), (1,4), (2,5), (3,1), (3,5), (4,2), (4,3), (4,4), (4,5)]);
+        pattern.set_cells(
+            &[(1,1), (1,4), (2,5), (3,1), (3,5), (4,2), (4,3), (4,4), (4,5)]);
+        pattern
+     }
+
+     pub fn midweight_spaceship() -> Pattern {
+        let mut pattern = Pattern::new_plain(8, 7);
+        pattern.set_cells(
+            &[(1,3), (2,1), (2,5), (3,6), (4,1), (4,6), (5,2), (5,3), (5,4), (5,5), (5,6)]);
+        pattern
+     }
+
+     pub fn heavyweight_spaceship() -> Pattern {
+        let mut pattern = Pattern::new_plain(9, 7);
+        pattern.set_cells(
+            &[(1,3), (1,4), (2,1), (2,6), (3,7), (4,1), (4,7), (5,2), (5,3), (5,4), (5,5), (5,6), (5,7)]);
         pattern
      }
     // -----------------------------------------

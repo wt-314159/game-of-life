@@ -19,7 +19,7 @@ const playPauseButton = document.getElementById("play-pause");
 const stepButton = document.getElementById("step");
 const resetButton = document.getElementById("reset");
 const clearButton = document.getElementById("clear");
-const patternDropdown = document.getElementById("pattern");
+const patternSelect = document.getElementById("pattern");
 // Give the canvas room for the cells and a 1px border around each
 const canvas = document.getElementById("game-of-life-canvas");
 canvas.height = (CELL_SIZE + 1) * height + 1;
@@ -152,27 +152,33 @@ clearButton.addEventListener("click", event => {
     drawCells();
 })
 
-patternDropdown.addEventListener("change", event => {
-    if (patternDropdown.value == "cell") {
+patternSelect.addEventListener("change", event => {
+    if (patternSelect.value == "cell") {
         pattern = null;
     } 
-    else if (patternDropdown.value == "blinker") {
+    else if (patternSelect.value == "blinker") {
         pattern = Pattern.blinker();
     }
-    else if (patternDropdown.value == "toad") {
+    else if (patternSelect.value == "toad") {
         pattern = Pattern.toad();
     }
-    else if (patternDropdown.value == "beacon") {
+    else if (patternSelect.value == "beacon") {
         pattern = Pattern.beacon();
     }
-    else if (patternDropdown.value == "pulsar") {
+    else if (patternSelect.value == "pulsar") {
         pattern = Pattern.pulsar();
     }
-    else if (patternDropdown.value == "glider") {
+    else if (patternSelect.value == "glider") {
         pattern = Pattern.glider();
     }
-    else if (patternDropdown.value == "lwss") {
+    else if (patternSelect.value == "lwss") {
         pattern = Pattern.lightweight_spaceship();
+    }
+    else if (patternSelect.value == "mwss") {
+        pattern = Pattern.midweight_spaceship();
+    }
+    else if (patternSelect.value == "hwss") {
+        pattern = Pattern.heavyweight_spaceship();
     }
 });
 
