@@ -157,13 +157,22 @@ patternDropdown.addEventListener("change", event => {
         pattern = null;
     } 
     else if (patternDropdown.value == "blinker") {
-        pattern = Pattern.new_blinker();
+        pattern = Pattern.blinker();
     }
     else if (patternDropdown.value == "toad") {
-        pattern = Pattern.new_toad();
+        pattern = Pattern.toad();
     }
     else if (patternDropdown.value == "beacon") {
-        pattern = Pattern.new_beacon();
+        pattern = Pattern.beacon();
+    }
+    else if (patternDropdown.value == "pulsar") {
+        pattern = Pattern.pulsar();
+    }
+    else if (patternDropdown.value == "glider") {
+        pattern = Pattern.glider();
+    }
+    else if (patternDropdown.value == "lwss") {
+        pattern = Pattern.lightweight_spaceship();
     }
 });
 

@@ -28,9 +28,16 @@
       <button id="clear">Clear</button>
       <select id="pattern">
         <option value="cell" selected=true>Single Cell</option>
-        <option value="blinker">Blinker</option>
-        <option value="toad">Toad</option>
-        <option value="beacon">Beacon</option>
+        <optgroup label="Oscillators">
+          <option value="blinker">Blinker</option>
+          <option value="toad">Toad</option>
+          <option value="beacon">Beacon</option>
+          <option value="pulsar">Pulsar</option>
+        </optgroup>
+        <optgroup label="Spaceships">
+          <option value="glider">Glider</option>
+          <option value="lwss">Lightweight Spaceship</option>
+        </optgroup>
       </select>
     </div>
     <canvas id="game-of-life-canvas"></canvas>

@@ -190,7 +190,9 @@ impl Pattern {
         Pattern { width, height, cells }
     }
 
-    pub fn new_blinker() -> Pattern {
+    // Constructor methods for simple oscillators
+    // ------------------------------------------
+    pub fn blinker() -> Pattern {
         let mut pattern = Pattern::new_plain(5, 5);
 
         for i in 1..=3 {
@@ -199,7 +201,7 @@ impl Pattern {
         pattern
     }
 
-    pub fn new_toad() -> Pattern {
+    pub fn toad() -> Pattern {
         let mut pattern = Pattern::new_plain(6, 6);
 
         let mut offset = 0;
@@ -212,7 +214,7 @@ impl Pattern {
         pattern
     }
 
-    pub fn new_beacon() -> Pattern {
+    pub fn beacon() -> Pattern {
         let mut pattern = Pattern::new_plain(6, 6);
 
         for r in 0..2 {
@@ -225,6 +227,41 @@ impl Pattern {
         }
         pattern
     }
+
+    pub fn pulsar() -> Pattern {
+        let mut pattern = Pattern::new_plain(17, 17);
+
+        pattern.set_cells(&[
+            (2,4), (2,5), (2,6), (2,10), (2,11), (2,12), 
+            (4,2), (4,7), (4,9),(4,14),
+            (5,2), (5,7), (5,9),(5,14),
+            (6,2), (6,7), (6,9),(6,14),
+            (7,4), (7,5), (7,6), (7,10), (7,11), (7,12),
+            (9,4), (9,5), (9,6), (9,10), (9,11), (9,12),
+            (10,2), (10,7), (10,9),(10,14),
+            (11,2), (11,7), (11,9),(11,14),
+            (12,2), (12,7), (12,9),(12,14),
+            (14,4), (14,5), (14,6), (14,10), (14,11), (14,12),]);
+        pattern
+    }
+    // ------------------------------------------
+
+    // Constructor methods for simple spaceships 
+    // -----------------------------------------
+     pub fn glider() -> Pattern {
+        let mut pattern = Pattern::new_plain(5, 5);
+
+        pattern.set_cells(&[(1,2), (2,3), (3,1), (3,2), (3,3)]);
+        pattern
+     }
+
+     pub fn lightweight_spaceship() -> Pattern {
+        let mut pattern = Pattern::new_plain(7, 6);
+
+        pattern.set_cells(&[(1,1), (1,4), (2,5), (3,1), (3,5), (4,2), (4,3), (4,4), (4,5)]);
+        pattern
+     }
+    // -----------------------------------------
 }
 
 // Public methods not exposed to JavaScript
