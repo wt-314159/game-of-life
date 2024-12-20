@@ -1,11 +1,19 @@
 mod utils;
 
 extern crate js_sys;
+
+#[cfg(not(feature = "benchmarking"))]
 extern crate web_sys;
+
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
+
+#[cfg(not(feature = "benchmarking"))]
 use web_sys::console;
+
+#[cfg(not(feature = "benchmarking"))]
 use wasm_bindgen::prelude::*;
+
 use std:: {
     cmp:: { max, min },
     fmt
@@ -24,6 +32,7 @@ pub struct Timer<'a> {
 
 impl<'a> Timer<'a> {
     pub fn new(name: &'a str) -> Timer<'a> {
+        #[cfg(not(feature = "benchmarking"))]
         console::time_with_label(name);
         Timer { name }
     }
@@ -31,11 +40,12 @@ impl<'a> Timer<'a> {
 
 impl<'a> Drop for Timer<'a> {
     fn drop(&mut self) {
+        #[cfg(not(feature = "benchmarking"))]
         console::time_end_with_label(self.name);
     }
 }
 
-#[wasm_bindgen]
+#[cfg_attr(not(feature = "benchmarking"), wasm_bindgen)]
 pub struct Universe {
     width: u32,
     height: u32,
@@ -97,7 +107,7 @@ impl Universe {
 }
 
 // Public methods, exposed to JavaScript via bindgen
-#[wasm_bindgen]
+#[cfg_attr(not(feature = "benchmarking"), wasm_bindgen)]
 impl Universe {
     pub fn new(width: u32, height: u32) -> Universe {
         // Enable logging for panics
@@ -257,7 +267,7 @@ impl fmt::Display for Universe {
 }
 
 // Patterns to create
-#[wasm_bindgen]
+#[cfg_attr(not(feature = "benchmarking"), wasm_bindgen)]
 impl Pattern {
     fn new_plain(width: u32, height: u32) -> Pattern {
         let size = (width * height) as usize;
