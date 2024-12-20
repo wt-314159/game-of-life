@@ -31,6 +31,50 @@ const canvas = document.getElementById("game-of-life-canvas");
 const ctx = canvas.getContext('2d');
 let animationId = null;
 
+//                  FPS Class
+// ================================================
+const fps = new class {
+    constructor() {
+        this.fps = document.getElementById("fps");
+        this.frames=[];
+        this.lastFrameTimeStamp = performance.now();
+    }
+
+    render() {
+        // Convert delta time since last frame render into FPS
+        const now = performance.now();
+        const delta = now - this.lastFrameTimeStamp;
+        this.lastFrameTimeStamp = now;
+        const fps = 1 / delta * 1000;
+
+        // Save only the 100 latest timings
+        this.frames.push(fps);
+        if (this.frames.length > 100) {
+            this.frames.shift();
+        }
+
+        // Find max, min, and mean of 100 latest timings
+        let min = Infinity;
+        let max = -Infinity;
+        let sum = 0;
+        for (let i = 0; i < this.frames.length; i++) {
+            sum += this.frames[i];
+            min = Math.min(min, this.frames[i]);
+            max = Math.max(max, this.frames[i]);
+        }
+        let mean = sum / this.frames.length;
+
+        // Render statistics
+        this.fps.textContent = `
+        FPS:
+         latest = ${Math.round(fps)}  
+avg of last 100 = ${Math.round(mean)}  
+min of last 100 = ${Math.round(min)}  
+max of last 100 = ${Math.round(max)}`.trim();
+    }
+};
+// ================================================
+
 // Method to set cell size and cell border size
 const setCellSize = () => {
     CELL_SIZE = parseInt(cellSizeSelect.value);
@@ -56,6 +100,7 @@ const setCanvasSizeFull = () => {
 
 // Render loop, runs each frame
 const renderLoop = () => {
+    fps.render();
     universe.tick();
 
     drawGrid();

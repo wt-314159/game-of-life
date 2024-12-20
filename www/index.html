@@ -15,6 +15,24 @@
         align-items: center;
         justify-content: center;
       }
+      #fps {
+        white-space: pre;
+        font-family: monospace;
+      }
+      .wrapper {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        grid-template-rows: 1;
+      }
+      .one {
+        grid-column: 1 / 4;
+        grid-row: 1;
+      }
+      .two {
+        grid-column: 4;
+        grid-row: 1;
+      }
     </style>
   </head>
   <body>
@@ -78,6 +96,9 @@
         <option value="270">270</option>
       </select>
     </div>
-    <canvas id="game-of-life-canvas"></canvas>
+    <div class="wrapper">
+      <canvas class="one" id="game-of-life-canvas"></canvas>
+      <div class="two" id="fps"></div>
+    </div>
   </body>
 </html>
