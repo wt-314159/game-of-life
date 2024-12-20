@@ -57,14 +57,16 @@ impl Universe {
     fn live_neighbour_count(&self, row: u32, column: u32) -> u8 {
         let mut count = 0;
 
-        let north = match row {
-            0 => self.height - 1,
-            _ => row - 1
+        let north = if row == 0 {
+            self.height - 1
+        } else {
+            row - 1
         };
 
-        let west = match column {
-            0 => self.width - 1,
-            _ => column - 1
+        let west = if column == 0 {
+            self.width - 1
+        } else {
+            column - 1
         };
 
         let east = if column == self.width - 1 {
