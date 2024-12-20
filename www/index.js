@@ -14,13 +14,18 @@ const width = 100;
 const height = 100;
 let universe = Universe.new_rand(width, height);
 let pattern = null;
+let showGrid = true;
+let gridCleared = false;
 
+// Get the controls by ID
 const playPauseButton = document.getElementById("play-pause");
 const stepButton = document.getElementById("step");
 const resetButton = document.getElementById("reset");
 const clearButton = document.getElementById("clear");
+const gridButton = document.getElementById("grid");
 const patternSelect = document.getElementById("pattern");
 const rotation = document.getElementById("rotation");
+
 // Give the canvas room for the cells and a 1px border around each
 const canvas = document.getElementById("game-of-life-canvas");
 canvas.height = (CELL_SIZE + 1) * height + 1;
@@ -42,6 +47,13 @@ const renderLoop = () => {
 // Methods for drawing the grid and cells to the canvas
 // ----------------------------------------------------
 const drawGrid = () => {
+    if (!showGrid) {
+        if (!gridCleared) {
+            ctx.clearRect(0, 0, width * CELL_BORDER + 1, height * CELL_BORDER + 1);
+            gridCleared = true;
+        }
+        return;
+    }
     ctx.beginPath();
     ctx.strokeStyle = GRID_COLOR;
 
@@ -153,6 +165,15 @@ clearButton.addEventListener("click", event => {
     drawCells();
 })
 
+// Event listener for grid button 
+gridButton.addEventListener("click", event => {
+    showGrid = !showGrid;
+    if (!showGrid) {
+        gridCleared = false;
+    }
+})
+
+// Event listener for the pattern select dropdown
 patternSelect.addEventListener("change", event => {
     switch (patternSelect.value) {
         case "blinker":
