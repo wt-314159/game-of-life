@@ -167,28 +167,36 @@ impl Universe {
     pub fn tick(&mut self) {
         // time how long the tick method takes
         let _timer = Timer::new("Universe::tick");
-        let mut next = self.cells.clone();
+        let mut next = { 
+            let _timer = Timer::new("allocate next cells");
+            self.cells.clone()
+        };
 
-        for row in 0..self.height {
-            for col in 0..self.width{
-                let idx = self.get_index(row, col);
-                let cell = self.cells[idx];
-                let live_neighbours = self.live_neighbour_count(row, col);
-                
-                next.set(idx, match(cell, live_neighbours) {
-                    // Live cells with less than 2 neighbours die, underpopulation
-                    (true, x) if x < 2 => false,
-                    // Live cells with more than 3 neighbours die, overpopulation
-                    (true, x) if x > 3 => false,
-                    // Dead cells with 3 neighbours become alive, reproduction
-                    (false, 3) => true,
-                    // All other cells remain in same state
-                    (other, _) => other
-                });
+        {
+            let _timer = Timer::new("new generation");
+            for row in 0..self.height {
+                for col in 0..self.width{
+                    let idx = self.get_index(row, col);
+                    let cell = self.cells[idx];
+                    let live_neighbours = self.live_neighbour_count(row, col);
+                    
+                    next.set(idx, match(cell, live_neighbours) {
+                        // Live cells with less than 2 neighbours die, underpopulation
+                        (true, x) if x < 2 => false,
+                        // Live cells with more than 3 neighbours die, overpopulation
+                        (true, x) if x > 3 => false,
+                        // Dead cells with 3 neighbours become alive, reproduction
+                        (false, 3) => true,
+                        // All other cells remain in same state
+                        (other, _) => other
+                    });
+                }
             }
         }
-
-        self.cells = next;
+        {
+            let _timer = Timer::new("free old cells");
+            self.cells = next;
+        }
     }
 
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
