@@ -4,6 +4,7 @@ extern crate js_sys;
 extern crate web_sys;
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
+use web_sys::console;
 use wasm_bindgen::prelude::*;
 use std:: {
     cmp:: { max, min },
@@ -17,12 +18,21 @@ macro_rules! log {
     }
 }
 
-#[wasm_bindgen]
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Cell {
-    Dead = 0,
-    Alive = 1,
+pub struct Timer<'a> {
+    name: &'a str,
+}
+
+impl<'a> Timer<'a> {
+    pub fn new(name: &'a str) -> Timer<'a> {
+        console::time_with_label(name);
+        Timer { name }
+    }
+}
+
+impl<'a> Drop for Timer<'a> {
+    fn drop(&mut self) {
+        console::time_end_with_label(self.name);
+    }
 }
 
 #[wasm_bindgen]
@@ -155,6 +165,8 @@ impl Universe {
     }
 
     pub fn tick(&mut self) {
+        // time how long the tick method takes
+        let _timer = Timer::new("Universe::tick");
         let mut next = self.cells.clone();
 
         for row in 0..self.height {

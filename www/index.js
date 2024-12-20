@@ -1,4 +1,4 @@
-import { Universe, Cell, Pattern } from "game-of-life";
+import { Universe, Pattern } from "game-of-life";
 // Import the WebAssembly memory
 import { memory } from "game-of-life/game_of_life_bg";
 
@@ -143,14 +143,38 @@ const drawCells = () => {
 
     ctx.beginPath();
 
+    // Fill all alive cells
+    // (N.B. setting context fillStyle is expensive, so set it once
+    // and do all alive cells, then set it again and do all dead,
+    // instead of changing for each cell)
+    ctx.fillStyle = ALIVE_COLOR;
     for (let row = 0; row < height; row++) {
         for (let col = 0; col < width; col++) {
             const idx = getIndex(row, col);
+            // Only color alive cells at this point
+            if (!bitIsSet(idx, cells)) {
+                continue;
+            }
 
-            ctx.fillStyle = bitIsSet(idx, cells) 
-                ? ALIVE_COLOR
-                : DEAD_COLOR;
-            
+            ctx.fillRect(
+                col * CELL_BORDER + 1,
+                row * CELL_BORDER + 1,
+                CELL_SIZE,
+                CELL_SIZE
+            );
+        }
+    }
+
+    // Fill all dead cells
+    ctx.fillStyle = DEAD_COLOR;
+    for (let row = 0; row < height; row++) {
+        for (let col = 0; col < width; col++) {
+            const idx = getIndex(row, col);
+            // Only color dead cells at this point
+            if (bitIsSet(idx, cells)) {
+                continue;
+            }
+
             ctx.fillRect(
                 col * CELL_BORDER + 1,
                 row * CELL_BORDER + 1,
