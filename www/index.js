@@ -15,7 +15,6 @@ const height = 100;
 let universe = Universe.new_rand(width, height);
 let pattern = null;
 let showGrid = true;
-let gridCleared = false;
 
 // Get the controls by ID
 const playPauseButton = document.getElementById("play-pause");
@@ -48,10 +47,6 @@ const renderLoop = () => {
 // ----------------------------------------------------
 const drawGrid = () => {
     if (!showGrid) {
-        if (!gridCleared) {
-            ctx.clearRect(0, 0, width * CELL_BORDER + 1, height * CELL_BORDER + 1);
-            gridCleared = true;
-        }
         return;
     }
     ctx.beginPath();
@@ -169,7 +164,11 @@ clearButton.addEventListener("click", event => {
 gridButton.addEventListener("click", event => {
     showGrid = !showGrid;
     if (!showGrid) {
-        gridCleared = false;
+        ctx.clearRect(0, 0, width * CELL_BORDER + 1, height * CELL_BORDER + 1);
+        drawCells();
+    }
+    else {
+        drawGrid();
     }
 })
 
