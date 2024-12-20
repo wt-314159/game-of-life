@@ -3,15 +3,15 @@ import { Universe, Cell, Pattern } from "game-of-life";
 import { memory } from "game-of-life/game_of_life_bg";
 
 // constants for cell pixel size and cell colors
-const CELL_SIZE = 6;
-const CELL_BORDER = CELL_SIZE + 1;
+let CELL_SIZE = 6;
+let CELL_BORDER = CELL_SIZE + 1;
 const GRID_COLOR = "#CCCCCC";
 const DEAD_COLOR = "#FFFFFF";
 const ALIVE_COLOR = "#000000";
 
 // Construct the universe with a given width and height
-const width = 100;
-const height = 100;
+let width = 100;
+let height = 100;
 let universe = Universe.new_rand(width, height);
 let pattern = null;
 let showGrid = true;
@@ -22,16 +22,37 @@ const stepButton = document.getElementById("step");
 const resetButton = document.getElementById("reset");
 const clearButton = document.getElementById("clear");
 const gridButton = document.getElementById("grid");
+const borderCheckbox = document.getElementById("cell_border");
+const cellSizeSelect = document.getElementById("cell_size");
 const patternSelect = document.getElementById("pattern");
 const rotation = document.getElementById("rotation");
-
-// Give the canvas room for the cells and a 1px border around each
 const canvas = document.getElementById("game-of-life-canvas");
-canvas.height = (CELL_SIZE + 1) * height + 1;
-canvas.width = (CELL_SIZE + 1) * height + 1;
 
 const ctx = canvas.getContext('2d');
 let animationId = null;
+
+// Method to set cell size and cell border size
+const setCellSize = () => {
+    CELL_SIZE = parseInt(cellSizeSelect.value);
+    if (borderCheckbox.checked) {
+        CELL_BORDER = CELL_SIZE + 1;
+    }
+    else {
+        CELL_BORDER = CELL_SIZE;
+    }
+};
+
+// Method to set grid size based on cell size 
+const setCanvasSizeFull = () => {
+    let gridSize = Math.floor(0.9 * window.innerHeight / CELL_BORDER);
+    width = gridSize;
+    height = gridSize;
+
+    let canvasHeight = gridSize * CELL_BORDER + 1;
+    canvas.height = canvasHeight;
+    canvas.width = canvasHeight;
+    universe = Universe.new_rand(width, height);
+}
 
 // Render loop, runs each frame
 const renderLoop = () => {
@@ -96,6 +117,22 @@ const drawCells = () => {
 
     ctx.stroke();
 };
+
+const clearCanvas = () => {
+    ctx.clearRect(0, 0, width * CELL_BORDER + 2, height * CELL_BORDER + 2);
+}
+
+const clearCanvasRedrawCells = () => {
+    clearCanvas();
+    if (borderCheckbox.checked) {
+        CELL_BORDER = CELL_SIZE + 1;
+    }
+    else {
+        CELL_BORDER = CELL_SIZE;
+        setCanvasSizeFull();
+    }
+    drawCells();
+};
 // ----------------------------------------------------
 
 const bitIsSet = (n, arr) => {
@@ -140,7 +177,7 @@ stepButton.addEventListener("click", event => {
         drawGrid();
         drawCells();
     }
-})
+});
 
 // Event listener for reset button
 resetButton.addEventListener("click", event => {
@@ -149,7 +186,7 @@ resetButton.addEventListener("click", event => {
     // Redraw the scene, in case we're currently paused
     drawGrid();
     drawCells();
-})
+});
 
 // Event listener for clear button
 clearButton.addEventListener("click", event => {
@@ -158,19 +195,38 @@ clearButton.addEventListener("click", event => {
     // Redraw the scene, in case we're currently paused
     drawGrid();
     drawCells();
-})
+});
 
 // Event listener for grid button 
 gridButton.addEventListener("click", event => {
     showGrid = !showGrid;
     if (!showGrid) {
-        ctx.clearRect(0, 0, width * CELL_BORDER + 1, height * CELL_BORDER + 1);
-        drawCells();
+        clearCanvasRedrawCells();
     }
     else {
+        clearCanvas();
+        CELL_BORDER = CELL_SIZE + 1;
+        setCanvasSizeFull();
         drawGrid();
+        drawCells();
     }
-})
+});
+
+// Event listener for cell border checkbox
+borderCheckbox.addEventListener("click", event => {
+    if (!showGrid) {
+        clearCanvasRedrawCells();
+    }
+});
+
+// Event listener for the cell size select dropdown
+cellSizeSelect.addEventListener("change", event => {
+    clearCanvas();
+    setCellSize();
+    setCanvasSizeFull();
+    drawGrid();
+    drawCells();
+});
 
 // Event listener for the pattern select dropdown
 patternSelect.addEventListener("change", event => {
@@ -256,4 +312,7 @@ canvas.addEventListener("click", event => {
 
 // --------------------------------------
 
+// Setup cell size and start rendering
+setCellSize();
+setCanvasSizeFull();
 play();
