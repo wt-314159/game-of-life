@@ -61,6 +61,29 @@ impl Universe {
         }
         count
     }
+
+    fn angle_width(&self, angle: u32) -> u32 {
+        match angle {
+            90 | 270 => self.height,
+            _ => self.width
+        }
+    }
+
+    fn angle_height(&self, angle: u32) -> u32 {
+        match angle {
+            90 | 270 => self.width,
+            _ => self.height
+        }
+    }
+
+    fn get_angle_index(&self, row: u32, col: u32, angle: u32) -> usize {
+        match angle {
+            90 => ((self.height - col - 1) * self.width + row) as usize, 
+            180 => self.cells.len() - (row * self.width + col + 1) as usize,
+            270 => (col * self.width + (self.width - row - 1)) as usize,
+            _ => (row * self.width + col) as usize
+        }
+    }
 }
 
 // Public methods, exposed to JavaScript via bindgen
@@ -161,16 +184,16 @@ impl Universe {
         self.cells.toggle(idx);
     }
 
-    pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32) {
-        let max_row = min(row + pattern.height, self.height) - row;
-        let max_col = min(column + pattern.width, self.width) - column;
+    pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32, angle: u32) {
+        let max_row = min(row + pattern.angle_height(angle), self.height) - row;
+        let max_col = min(column + pattern.angle_width(angle), self.width) - column;
 
         for r in 0..max_row {
             let u_row = r + row;
             for c in 0..max_col {
                 let u_col = c + column;
                 let u_idx = self.get_index(u_row, u_col);
-                let p_idx = pattern.get_index(r, c);
+                let p_idx = pattern.get_angle_index(r, c, angle);
                 self.cells.set(u_idx, pattern.cells[p_idx]);
             } 
         }
@@ -178,6 +201,38 @@ impl Universe {
 
     pub fn render(&self) -> String {
         self.to_string()
+    }
+}
+
+
+
+// Public methods not exposed to JavaScript
+impl Universe {
+    // Get all the cells in the universe
+    pub fn get_cells(&self) -> &FixedBitSet {
+        &self.cells
+    }
+
+    // Set cells to be alive by passing row and col
+    pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
+        for (row, col) in cells.iter().cloned() {
+            let idx = self.get_index(row, col);
+            self.cells.set(idx, true);
+        }
+    }
+}
+
+impl fmt::Display for Universe {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for row in 0..self.height {
+            for col in 0..self.width {
+                let idx = self.get_index(row, col);
+                let symbol = if self.cells[idx] { '◼' } else { '◻' };
+                write!(f, "{}", symbol)?;
+            }
+            write!(f, "\n")?;
+        }
+        Ok(())
     }
 }
 
@@ -343,34 +398,75 @@ impl Pattern {
         pattern
     }
     // --------------------------------------------
+
+    // Constructor methods for creating eater patterns
+    // -----------------------------------------------
+    pub fn eater_one() -> Pattern {
+        let mut pattern = Pattern::new_plain(6, 6);
+        pattern.set_cells(&[(1,1), (1,2), (2,1), (2,3), (3,3), (4,3), (4,4)]);
+        pattern
+    }
+    // -----------------------------------------------
 }
 
-// Public methods not exposed to JavaScript
-impl Universe {
-    // Get all the cells in the universe
-    pub fn get_cells(&self) -> &FixedBitSet {
-        &self.cells
+
+//                      Testing
+// ======================================================
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_angle_index_90() {
+        let universe = Universe::new(5,3);
+
+        let start_index = universe.get_angle_index(0, 0, 90);
+        assert_eq!(start_index, 10);
+
+        let row_0_col_1 = universe.get_angle_index(0, 1, 90);
+        assert_eq!(row_0_col_1, 5);
+
+        let row_0_col_2 = universe.get_angle_index(0, 2, 90);
+        assert_eq!(row_0_col_2, 0);
+
+        let row_1_col_1 = universe.get_angle_index(1, 1, 90);
+        assert_eq!(row_1_col_1, 6);
+
+        let last = universe.get_angle_index(4, 2, 90);
+        assert_eq!(last, 4);
+
+        let row_4_col_0 = universe.get_angle_index(4, 0, 90);
+        assert_eq!(row_4_col_0, 14);
     }
 
-    // Set cells to be alive by passing row and col
-    pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
-        for (row, col) in cells.iter().cloned() {
-            let idx = self.get_index(row, col);
-            self.cells.set(idx, true);
-        }
-    }
-}
+    #[test]
+    fn test_get_angle_index_180() {
+        let universe = Universe::new(5,3);
 
-impl fmt::Display for Universe {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for row in 0..self.height {
-            for col in 0..self.width {
-                let idx = self.get_index(row, col);
-                let symbol = if self.cells[idx] { '◼' } else { '◻' };
-                write!(f, "{}", symbol)?;
-            }
-            write!(f, "\n")?;
-        }
-        Ok(())
+        let start_index = universe.get_angle_index(0, 0, 180);
+        assert_eq!(start_index, 14);
+
+        let row_2_col_3 = universe.get_angle_index(2, 3, 180);
+        assert_eq!(row_2_col_3, 1);
+
+        let row_1_col_3 = universe.get_angle_index(1, 3, 180);
+        assert_eq!(row_1_col_3, 6);
+    }
+
+    #[test]
+    fn test_get_angle_index_270() {
+        let universe = Universe::new(5, 3);
+
+        let start_index = universe.get_angle_index(0, 0, 270);
+        assert_eq!(start_index, 4);
+
+        let row_0_col_1 = universe.get_angle_index(0, 1, 270);
+        assert_eq!(row_0_col_1, 9);
+
+        let row_1_col_2 = universe.get_angle_index(1, 2, 270);
+        assert_eq!(row_1_col_2, 13);
+
+        let row_2_col_1 = universe.get_angle_index(2, 1, 270);
+        assert_eq!(row_2_col_1, 7);
     }
 }

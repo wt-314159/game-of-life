@@ -3,15 +3,15 @@ import { Universe, Cell, Pattern } from "game-of-life";
 import { memory } from "game-of-life/game_of_life_bg";
 
 // constants for cell pixel size and cell colors
-const CELL_SIZE = 3;
+const CELL_SIZE = 6;
 const CELL_BORDER = CELL_SIZE + 1;
 const GRID_COLOR = "#CCCCCC";
 const DEAD_COLOR = "#FFFFFF";
 const ALIVE_COLOR = "#000000";
 
 // Construct the universe with a given width and height
-const width = 160;
-const height = 160;
+const width = 100;
+const height = 100;
 let universe = Universe.new_rand(width, height);
 let pattern = null;
 
@@ -200,6 +200,9 @@ patternSelect.addEventListener("change", event => {
         case "lin_engine":
             pattern = Pattern.linear_engine();
             break;
+        case "eater1":
+            pattern = Pattern.eater_one();
+            break;
         default:
             pattern = null;
     }
@@ -218,11 +221,11 @@ canvas.addEventListener("click", event => {
     const row = Math.min(Math.floor(canvasTop / CELL_BORDER), height - 1);
     const col = Math.min(Math.floor(canvasLeft / CELL_BORDER), height - 1);
 
-    let angle = parseInt(rotation.value);
     if (pattern == null){
         universe.toggle_cell(row, col);
     } else {
-        universe.insert_pattern(pattern, row, col);
+        let angle = parseInt(rotation.value);
+        universe.insert_pattern(pattern, row, col, angle);
     }
 
     // Redraw the scene (most likely we will be toggling cells when the game is paused,
