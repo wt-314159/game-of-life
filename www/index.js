@@ -152,19 +152,19 @@ const drawCells = () => {
         for (let col = 0; col < width; col++) {
             const idx = getIndex(row, col);
             // Only color alive cells at this point
-            if (!bitIsSet(idx, cells)) {
-                continue;
+            if (bitIsSet(idx, cells)) {
+                ctx.rect(
+                    col * CELL_BORDER + 1,
+                    row * CELL_BORDER + 1,
+                    CELL_SIZE,
+                    CELL_SIZE
+                );
             }
-
-            ctx.fillRect(
-                col * CELL_BORDER + 1,
-                row * CELL_BORDER + 1,
-                CELL_SIZE,
-                CELL_SIZE
-            );
         }
     }
-
+    ctx.fill();
+    
+    ctx.beginPath();
     // Fill all dead cells
     ctx.fillStyle = DEAD_COLOR;
     for (let row = 0; row < height; row++) {
@@ -175,7 +175,7 @@ const drawCells = () => {
                 continue;
             }
 
-            ctx.fillRect(
+            ctx.rect(
                 col * CELL_BORDER + 1,
                 row * CELL_BORDER + 1,
                 CELL_SIZE,
@@ -183,8 +183,7 @@ const drawCells = () => {
             );
         }
     }
-
-    ctx.stroke();
+    ctx.fill();
 };
 
 const clearCanvas = () => {
