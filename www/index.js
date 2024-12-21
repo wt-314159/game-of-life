@@ -27,8 +27,10 @@ const cellSizeSelect = document.getElementById("cell_size");
 const patternSelect = document.getElementById("pattern");
 const rotation = document.getElementById("rotation");
 const canvas = document.getElementById("game-of-life-canvas");
+canvas.offscreenCanvas = document.createElement("canvas");
 
 const ctx = canvas.getContext('2d');
+const offscreenCtx = canvas.offscreenCanvas.getContext("2d");
 let animationId = null;
 
 //                  FPS Class
@@ -95,6 +97,9 @@ const setCanvasSizeFull = () => {
     let canvasHeight = gridSize * CELL_BORDER + 1;
     canvas.height = canvasHeight;
     canvas.width = canvasHeight;
+    canvas.offscreenCanvas.width = canvas.width;
+    canvas.offscreenCanvas.height = canvas.height;
+    redrawGrid();
     universe = Universe.new_rand(width, height);
 }
 
@@ -111,27 +116,31 @@ const renderLoop = () => {
 
 // Methods for drawing the grid and cells to the canvas
 // ----------------------------------------------------
-const drawGrid = () => {
-    if (!showGrid) {
-        return;
-    }
-    ctx.beginPath();
-    ctx.strokeStyle = GRID_COLOR;
+const redrawGrid = () => {
+    offscreenCtx.beginPath();
+    offscreenCtx.strokeStyle = GRID_COLOR;
 
     // Vertical lines
     for (let i = 0; i <= width; i++) {
-        ctx.moveTo(i * CELL_BORDER + 1, 0);
-        ctx.lineTo(i * CELL_BORDER + 1, CELL_BORDER * height + 1);
+        offscreenCtx.moveTo(i * CELL_BORDER + 1, 0);
+        offscreenCtx.lineTo(i * CELL_BORDER + 1, CELL_BORDER * height + 1);
     }
 
     // Horizontal lines
     for (let j = 0; j<= height; j++) {
-        ctx.moveTo(0, j * CELL_BORDER + 1);
-        ctx.lineTo(width * CELL_BORDER + 1, j * CELL_BORDER + 1);
+        offscreenCtx.moveTo(0, j * CELL_BORDER + 1);
+        offscreenCtx.lineTo(width * CELL_BORDER + 1, j * CELL_BORDER + 1);
     }
 
-    ctx.stroke();
+    offscreenCtx.stroke();
 };
+
+const drawGrid = () => {
+    if (!showGrid) {
+        return;
+    }
+    ctx.drawImage(canvas.offscreenCanvas, 0, 0);
+}
 
 const getIndex = (row, column) => {
     return row * width + column;
@@ -163,7 +172,7 @@ const drawCells = () => {
         }
     }
     ctx.fill();
-    
+
     ctx.beginPath();
     // Fill all dead cells
     ctx.fillStyle = DEAD_COLOR;
@@ -272,9 +281,11 @@ gridButton.addEventListener("click", event => {
         clearCanvasRedrawCells();
     }
     else {
-        clearCanvas();
-        CELL_BORDER = CELL_SIZE + 1;
-        setCanvasSizeFull();
+        if (!borderCheckbox.checked) {
+            clearCanvas();
+            CELL_BORDER = CELL_SIZE + 1;
+            setCanvasSizeFull();
+        }
         drawGrid();
         drawCells();
     }
