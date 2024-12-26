@@ -40,6 +40,7 @@ pub struct Universe {
     width: u32,
     height: u32,
     cells: FixedBitSet,
+    changed_cells: FixedBitSet
 }
 
 // Pattern struct to hold various patterns we might want
@@ -140,7 +141,9 @@ impl Universe {
         utils::set_panic_hook();
         let size = (width * height) as usize;
         let cells = FixedBitSet::with_capacity(size);
-        Universe { width, height, cells }
+        let mut changed_cells = FixedBitSet::with_capacity(size);
+        changed_cells.set_range(.., true);
+        Universe { width, height, cells, changed_cells }
     }
 
     pub fn new_pattern(width: u32, height: u32) -> Universe {
@@ -148,15 +151,19 @@ impl Universe {
         utils::set_panic_hook();
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
+        let mut changed_cells = FixedBitSet::with_capacity(size);
+        changed_cells.set_range(.., true);
 
         for i in 0..size {
-            cells.set(i, i % 2 == 0 || i % 7 == 0);
+            let alive = i % 2 == 0 || i % 7 == 0;
+            cells.set(i, alive);
         }
         
         Universe {
             width,
             height,
-            cells
+            cells,
+            changed_cells
         }
     }
 
@@ -165,6 +172,8 @@ impl Universe {
         utils::set_panic_hook();
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
+        let mut changed_cells = FixedBitSet::with_capacity(size);
+        changed_cells.set_range(.., true);
 
         for i in 0..size{
             let state = js_sys::Math::random() < 0.5;
@@ -174,7 +183,8 @@ impl Universe {
         Universe {
             width,
             height,
-            cells
+            cells,
+            changed_cells
         }
     }
 
@@ -184,7 +194,9 @@ impl Universe {
 
     pub fn set_width(&mut self, width: u32) {
         self.width = width;
-        self.cells = FixedBitSet::with_capacity((width * self.height) as usize);
+        let size = (width * self.height) as usize;
+        self.cells = FixedBitSet::with_capacity(size);
+        self.changed_cells = FixedBitSet::with_capacity(size);
     } 
 
     pub fn height(&self) -> u32 {
@@ -193,51 +205,59 @@ impl Universe {
 
     pub fn set_height(&mut self, height: u32) {
         self.height = height;
-        self.cells = FixedBitSet::with_capacity((self.width * height) as usize);
+        let size = (self.width * height) as usize;
+        self.cells = FixedBitSet::with_capacity(size);
+        self.changed_cells = FixedBitSet::with_capacity(size);
     }
 
     pub fn cells(&self) -> *const usize {
         self.cells.as_slice().as_ptr()
     }
 
-    pub fn tick(&mut self) {
-        // time how long the tick method takes
-        let _timer = Timer::new("Universe::tick");
-        let mut next = { 
-            let _timer = Timer::new("allocate next cells");
-            self.cells.clone()
-        };
+    pub fn changed_cells(&self) -> *const usize {
+        self.changed_cells.as_slice().as_ptr()
+    }
 
-        {
-            let _timer = Timer::new("new generation");
-            for row in 0..self.height {
-                for col in 0..self.width{
-                    let idx = self.get_index(row, col);
-                    let cell = self.cells[idx];
-                    let live_neighbours = self.live_neighbour_count(row, col);
-                    
-                    next.set(idx, match(cell, live_neighbours) {
-                        // Live cells with less than 2 neighbours die, underpopulation
-                        (true, x) if x < 2 => false,
-                        // Live cells with more than 3 neighbours die, overpopulation
-                        (true, x) if x > 3 => false,
-                        // Dead cells with 3 neighbours become alive, reproduction
-                        (false, 3) => true,
-                        // All other cells remain in same state
-                        (other, _) => other
-                    });
-                }
+    pub fn tick(&mut self) {
+        let mut next = self.cells.clone();
+
+        for row in 0..self.height {
+            for col in 0..self.width{
+                let idx = self.get_index(row, col);
+                let cell = self.cells[idx];
+                let live_neighbours = self.live_neighbour_count(row, col);
+                
+                next.set(idx, match(cell, live_neighbours) {
+                    // Live cells with less than 2 neighbours die, underpopulation
+                    (true, x) if x < 2 => {
+                        self.changed_cells.set(idx, true);
+                        false
+                    },
+                    // Live cells with more than 3 neighbours die, overpopulation
+                    (true, x) if x > 3 => {
+                        self.changed_cells.set(idx, true);
+                        false
+                    }
+                    // Dead cells with 3 neighbours become alive, reproduction
+                    (false, 3) => {
+                        self.changed_cells.set(idx, true);
+                        true
+                    },
+                    // All other cells remain in same state
+                    (other, _) => {
+                        self.changed_cells.set(idx, false);
+                        other
+                    }
+                });
             }
         }
-        {
-            let _timer = Timer::new("free old cells");
-            self.cells = next;
-        }
+        self.cells = next;
     }
 
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
         let idx = self.get_index(row, column);
         self.cells.toggle(idx);
+        self.changed_cells.set(idx, true);
     }
 
     pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32, angle: u32) {
@@ -250,7 +270,9 @@ impl Universe {
                 let u_col = c + column;
                 let u_idx = self.get_index(u_row, u_col);
                 let p_idx = pattern.get_angle_index(r, c, angle);
+
                 self.cells.set(u_idx, pattern.cells[p_idx]);
+                self.changed_cells.set(u_idx, true);
             } 
         }
     }
@@ -298,7 +320,8 @@ impl Pattern {
     fn new_plain(width: u32, height: u32) -> Pattern {
         let size = (width * height) as usize;
         let cells = FixedBitSet::with_capacity(size);
-        Pattern { width, height, cells }
+        let changed_cells = FixedBitSet::with_capacity(size);
+        Pattern { width, height, cells, changed_cells }
     }
 
     // Constructor methods for simple oscillators

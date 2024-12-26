@@ -26,11 +26,13 @@ const borderCheckbox = document.getElementById("cell_border");
 const cellSizeSelect = document.getElementById("cell_size");
 const patternSelect = document.getElementById("pattern");
 const rotation = document.getElementById("rotation");
-const canvas = document.getElementById("game-of-life-canvas");
-canvas.offscreenCanvas = document.createElement("canvas");
-
-const ctx = canvas.getContext('2d');
-const offscreenCtx = canvas.offscreenCanvas.getContext("2d");
+// Get various canvases by ID
+const gameCanvas = document.getElementById("game-layer");
+const ctx = gameCanvas.getContext("2d");
+const gridCanvas = document.getElementById("grid-layer");
+const gridCtx = gridCanvas.getContext("2d");
+const foreCanvas = document.getElementById("foreground-layer");
+const foreCtx = foreCanvas.getContext("2d");
 let animationId = null;
 
 //                  FPS Class
@@ -94,12 +96,15 @@ const setCanvasSizeFull = () => {
     width = gridSize;
     height = gridSize;
 
-    let canvasHeight = gridSize * CELL_BORDER + 1;
-    canvas.height = canvasHeight;
-    canvas.width = canvasHeight;
-    canvas.offscreenCanvas.width = canvas.width;
-    canvas.offscreenCanvas.height = canvas.height;
-    redrawGrid();
+    let canvasSize = gridSize * CELL_BORDER + 1;
+
+    gameCanvas.height = canvasSize;
+    gameCanvas.width = canvasSize;
+    gridCanvas.height = canvasSize;
+    gridCanvas.width = canvasSize;
+    foreCanvas.height = canvasSize;
+    foreCanvas.width = canvasSize;
+    drawGrid();
     universe = Universe.new_rand(width, height);
 }
 
@@ -108,7 +113,6 @@ const renderLoop = () => {
     fps.render();
     universe.tick();
 
-    drawGrid();
     drawCells();
 
     animationId = requestAnimationFrame(renderLoop);
@@ -116,31 +120,24 @@ const renderLoop = () => {
 
 // Methods for drawing the grid and cells to the canvas
 // ----------------------------------------------------
-const redrawGrid = () => {
-    offscreenCtx.beginPath();
-    offscreenCtx.strokeStyle = GRID_COLOR;
+const drawGrid = () => {
+    gridCtx.beginPath();
+    gridCtx.strokeStyle = GRID_COLOR;
 
     // Vertical lines
     for (let i = 0; i <= width; i++) {
-        offscreenCtx.moveTo(i * CELL_BORDER + 1, 0);
-        offscreenCtx.lineTo(i * CELL_BORDER + 1, CELL_BORDER * height + 1);
+        gridCtx.moveTo(i * CELL_BORDER + 1, 0);
+        gridCtx.lineTo(i * CELL_BORDER + 1, CELL_BORDER * height + 1);
     }
 
     // Horizontal lines
     for (let j = 0; j<= height; j++) {
-        offscreenCtx.moveTo(0, j * CELL_BORDER + 1);
-        offscreenCtx.lineTo(width * CELL_BORDER + 1, j * CELL_BORDER + 1);
+        gridCtx.moveTo(0, j * CELL_BORDER + 1);
+        gridCtx.lineTo(width * CELL_BORDER + 1, j * CELL_BORDER + 1);
     }
 
-    offscreenCtx.stroke();
+    gridCtx.stroke();
 };
-
-const drawGrid = () => {
-    if (!showGrid) {
-        return;
-    }
-    ctx.drawImage(canvas.offscreenCanvas, 0, 0);
-}
 
 const getIndex = (row, column) => {
     return row * width + column;
@@ -149,6 +146,8 @@ const getIndex = (row, column) => {
 const drawCells = () => {
     const cellsPtr = universe.cells();
     const cells = new Uint8Array(memory.buffer, cellsPtr, width * height / 8);
+    const changedCellsPtr = universe.changed_cells();
+    const changedCells = new Uint8Array(memory.buffer, changedCellsPtr, width * height / 8);
 
     ctx.beginPath();
 
@@ -160,8 +159,9 @@ const drawCells = () => {
     for (let row = 0; row < height; row++) {
         for (let col = 0; col < width; col++) {
             const idx = getIndex(row, col);
+            // Skip any cells which haven't changed
             // Only color alive cells at this point
-            if (bitIsSet(idx, cells)) {
+            if (bitIsSet(idx, changedCells) && bitIsSet(idx, cells)) {
                 ctx.rect(
                     col * CELL_BORDER + 1,
                     row * CELL_BORDER + 1,
@@ -180,7 +180,7 @@ const drawCells = () => {
         for (let col = 0; col < width; col++) {
             const idx = getIndex(row, col);
             // Only color dead cells at this point
-            if (bitIsSet(idx, cells)) {
+            if (!bitIsSet(idx, changedCells) || bitIsSet(idx, cells)) {
                 continue;
             }
 
@@ -197,6 +197,7 @@ const drawCells = () => {
 
 const clearCanvas = () => {
     ctx.clearRect(0, 0, width * CELL_BORDER + 2, height * CELL_BORDER + 2);
+    gridCtx.clearRect(0, 0, width * CELL_BORDER + 2, height * CELL_BORDER + 2);
 }
 
 const clearCanvasRedrawCells = () => {
@@ -251,7 +252,6 @@ stepButton.addEventListener("click", event => {
     if (isPaused()) {
         universe.tick();
 
-        drawGrid();
         drawCells();
     }
 });
@@ -260,8 +260,6 @@ stepButton.addEventListener("click", event => {
 resetButton.addEventListener("click", event => {
     universe = Universe.new_rand(width, height);
 
-    // Redraw the scene, in case we're currently paused
-    drawGrid();
     drawCells();
 });
 
@@ -270,7 +268,6 @@ clearButton.addEventListener("click", event => {
     universe = Universe.new(width, height);
 
     // Redraw the scene, in case we're currently paused
-    drawGrid();
     drawCells();
 });
 
@@ -364,11 +361,11 @@ patternSelect.addEventListener("change", event => {
 });
 
 // Event listener for canvas, to toggle cells
-canvas.addEventListener("click", event => {
-    const boundingRect = canvas.getBoundingClientRect();
+foreCanvas.addEventListener("click", event => {
+    const boundingRect = gameCanvas.getBoundingClientRect();
     // Convert the page relative click coordinates to canvas relative
-    const scaleX = canvas.width / boundingRect.width;
-    const scaleY = canvas.height / boundingRect.height;
+    const scaleX = gameCanvas.width / boundingRect.width;
+    const scaleY = gameCanvas.height / boundingRect.height;
 
     const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
     const canvasTop = (event.clientY - boundingRect.top) * scaleY;
@@ -385,7 +382,6 @@ canvas.addEventListener("click", event => {
 
     // Redraw the scene (most likely we will be toggling cells when the game is paused,
     // so they wouldn't be redrawn until the game was running again otherwise)
-    drawGrid();
     drawCells();
 });
 

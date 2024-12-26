@@ -33,6 +33,18 @@
         grid-column: 4;
         grid-row: 1;
       }
+      canvas {
+        position: relative
+      }
+      #foreground-layer {
+        z-index: 3;
+      }
+      #game-layer {
+        z-index: 2;
+      }
+      #grid-layer {
+        z-index: 1;
+      }
     </style>
   </head>
   <body>
@@ -49,6 +61,7 @@
       <button id="grid">▦</button>
       <label for="cell_size">Cell Size</label>
       <select id="cell_size">
+        <option value="1">1px</option>
         <option value="2">2px</option>
         <option value="3">3px</option>
         <option value="4">4px</option>
@@ -97,8 +110,11 @@
         <option value="270">270</option>
       </select>
     </div>
+
     <div class="wrapper">
-      <canvas class="one" id="game-of-life-canvas"></canvas>
+      <canvas id="foreground-layer" class="one"></canvas>
+      <canvas id="game-layer" class="one"></canvas>
+      <canvas id="grid-layer" class="one"></canvas>
       <div class="two" id="fps"></div>
     </div>
   </body>
