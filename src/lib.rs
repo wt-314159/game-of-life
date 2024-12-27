@@ -16,7 +16,7 @@ use wasm_bindgen::prelude::*;
 
 use std:: {
     cmp:: { max, min },
-    fmt
+    fmt, ops::Index
 };
 
 // A macro to provide console logging syntax
@@ -49,8 +49,71 @@ impl<'a> Drop for Timer<'a> {
 pub struct Universe {
     width: u32,
     height: u32,
-    cells: FixedBitSet,
+    cells: Cells,
     changed_cells: FixedBitSet
+}
+
+pub struct Cells {
+    first: FixedBitSet,
+    second: FixedBitSet,
+    show_second: bool
+}
+
+impl Cells {
+    fn with_capacity(size: usize) -> Cells {
+        let first = FixedBitSet::with_capacity(size);
+        let second = FixedBitSet::with_capacity(size);
+        Cells { first, second, show_second: false }
+    }
+
+    fn cells(&self) -> *const usize {
+        if self.show_second {
+            self.second.as_slice().as_ptr()
+        } else {
+            self.first.as_slice().as_ptr()
+        }
+    }
+
+    fn get_cells(&self) -> &FixedBitSet {
+        if self.show_second {
+            &self.second
+        } else {
+            &self.first
+        }
+    }
+
+    fn set(&mut self, bit: usize, enabled: bool) {
+        // set the not shown
+        if self.show_second {
+            self.first.set(bit, enabled);
+        } else {
+            self.second.set(bit, enabled);
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.first.len()
+    }
+
+    fn toggle(&mut self, bit: usize) {
+        if self.show_second {
+            self.first.toggle(bit);
+        } else {
+            self.second.toggle(bit);
+        }
+    }
+}
+
+impl Index<usize> for Cells {
+    type Output = bool;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        if self.show_second {
+            &self.second[index]
+        } else {
+            &self.first[index]
+        }
+    }
 }
 
 // Pattern struct to hold various patterns we might want
@@ -150,7 +213,7 @@ impl Universe {
         // Enable logging for panics
         utils::set_panic_hook();
         let size = (width * height) as usize;
-        let cells = FixedBitSet::with_capacity(size);
+        let cells = Cells::with_capacity(size);
         let mut changed_cells = FixedBitSet::with_capacity(size);
         changed_cells.set_range(.., true);
         Universe { width, height, cells, changed_cells }
@@ -160,7 +223,7 @@ impl Universe {
         // Enable logging for panics
         utils::set_panic_hook();
         let size = (width * height) as usize;
-        let mut cells = FixedBitSet::with_capacity(size);
+        let mut cells = Cells::with_capacity(size);
         let mut changed_cells = FixedBitSet::with_capacity(size);
         changed_cells.set_range(.., true);
 
@@ -181,7 +244,7 @@ impl Universe {
         // Enable logging for panics
         utils::set_panic_hook();
         let size = (width * height) as usize;
-        let mut cells = FixedBitSet::with_capacity(size);
+        let mut cells = Cells::with_capacity(size);
         let mut changed_cells = FixedBitSet::with_capacity(size);
         changed_cells.set_range(.., true);
 
@@ -205,7 +268,7 @@ impl Universe {
     pub fn set_width(&mut self, width: u32) {
         self.width = width;
         let size = (width * self.height) as usize;
-        self.cells = FixedBitSet::with_capacity(size);
+        self.cells = Cells::with_capacity(size);
         self.changed_cells = FixedBitSet::with_capacity(size);
     } 
 
@@ -216,12 +279,12 @@ impl Universe {
     pub fn set_height(&mut self, height: u32) {
         self.height = height;
         let size = (self.width * height) as usize;
-        self.cells = FixedBitSet::with_capacity(size);
+        self.cells = Cells::with_capacity(size);
         self.changed_cells = FixedBitSet::with_capacity(size);
     }
 
     pub fn cells(&self) -> *const usize {
-        self.cells.as_slice().as_ptr()
+        self.cells.cells()
     }
 
     pub fn changed_cells(&self) -> *const usize {
@@ -229,15 +292,13 @@ impl Universe {
     }
 
     pub fn tick(&mut self) {
-        let mut next = self.cells.clone();
-
         for row in 0..self.height {
             for col in 0..self.width{
                 let idx = self.get_index(row, col);
                 let cell = self.cells[idx];
                 let live_neighbours = self.live_neighbour_count(row, col);
                 
-                next.set(idx, match(cell, live_neighbours) {
+                self.cells.set(idx, match(cell, live_neighbours) {
                     // Live cells with less than 2 neighbours die, underpopulation
                     (true, x) if x < 2 => {
                         self.changed_cells.set(idx, true);
@@ -261,7 +322,7 @@ impl Universe {
                 });
             }
         }
-        self.cells = next;
+        self.cells.show_second = !self.cells.show_second;
     }
 
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
@@ -298,7 +359,7 @@ impl Universe {
 impl Universe {
     // Get all the cells in the universe
     pub fn get_cells(&self) -> &FixedBitSet {
-        &self.cells
+        &self.cells.get_cells()
     }
 
     // Set cells to be alive by passing row and col
@@ -329,7 +390,7 @@ impl fmt::Display for Universe {
 impl Pattern {
     fn new_plain(width: u32, height: u32) -> Pattern {
         let size = (width * height) as usize;
-        let cells = FixedBitSet::with_capacity(size);
+        let cells = Cells::with_capacity(size);
         let changed_cells = FixedBitSet::with_capacity(size);
         Pattern { width, height, cells, changed_cells }
     }
