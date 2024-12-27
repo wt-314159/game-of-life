@@ -83,11 +83,20 @@ impl Cells {
     }
 
     fn set(&mut self, bit: usize, enabled: bool) {
-        // set the not shown
+        // set the not shown bits
         if self.show_second {
             self.first.set(bit, enabled);
         } else {
             self.second.set(bit, enabled);
+        }
+    }
+
+    fn set_current(&mut self, bit: usize, enabled: bool) {
+        // set the shown bits
+        if self.show_second {
+            self.second.set(bit, enabled);
+        } else {
+            self.first.set(bit, enabled);
         }
     }
 
@@ -96,11 +105,16 @@ impl Cells {
     }
 
     fn toggle(&mut self, bit: usize) {
+        // toggle the current bits, not the buffered set
         if self.show_second {
-            self.first.toggle(bit);
-        } else {
             self.second.toggle(bit);
+        } else {
+            self.first.toggle(bit);
         }
+    }
+
+    fn show_next(&mut self) {
+        self.show_second = !self.show_second;
     }
 }
 
@@ -231,7 +245,7 @@ impl Universe {
             let alive = i % 2 == 0 || i % 7 == 0;
             cells.set(i, alive);
         }
-        
+        cells.show_next();
         Universe {
             width,
             height,
@@ -252,7 +266,7 @@ impl Universe {
             let state = js_sys::Math::random() < 0.5;
             cells.set(i, state);
         }
-
+        cells.show_next();
         Universe {
             width,
             height,
@@ -322,7 +336,7 @@ impl Universe {
                 });
             }
         }
-        self.cells.show_second = !self.cells.show_second;
+        self.cells.show_next();
     }
 
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
@@ -342,7 +356,7 @@ impl Universe {
                 let u_idx = self.get_index(u_row, u_col);
                 let p_idx = pattern.get_angle_index(r, c, angle);
 
-                self.cells.set(u_idx, pattern.cells[p_idx]);
+                self.cells.set_current(u_idx, pattern.cells[p_idx]);
                 self.changed_cells.set(u_idx, true);
             } 
         }
@@ -367,6 +381,13 @@ impl Universe {
         for (row, col) in cells.iter().cloned() {
             let idx = self.get_index(row, col);
             self.cells.set(idx, true);
+        }
+    }
+
+    pub fn set_current_cells(&mut self, cells: &[(u32, u32)]) {
+        for (row, col) in cells.iter().cloned() {
+            let idx = self.get_index(row, col);
+            self.cells.set_current(idx, true);
         }
     }
 }
@@ -436,7 +457,7 @@ impl Pattern {
     pub fn pulsar() -> Pattern {
         let mut pattern = Pattern::new_plain(17, 17);
 
-        pattern.set_cells(&[
+        pattern.set_current_cells(&[
             (2,4), (2,5), (2,6), (2,10), (2,11), (2,12), 
             (4,2), (4,7), (4,9),(4,14),
             (5,2), (5,7), (5,9),(5,14),
@@ -452,7 +473,7 @@ impl Pattern {
 
     pub fn pentadecathlon() -> Pattern {
         let mut pattern = Pattern::new_plain(11, 18);
-        pattern.set_cells(
+        pattern.set_current_cells(
             &[(4,5), (5,5), (6,4), (6,6), (7,5), (8,5), (9,5), (10,5), (11,4), (11,6), (12,5), (13,5)]);
         pattern
     }
@@ -463,28 +484,28 @@ impl Pattern {
      pub fn glider() -> Pattern {
         let mut pattern = Pattern::new_plain(5, 5);
 
-        pattern.set_cells(&[(1,2), (2,3), (3,1), (3,2), (3,3)]);
+        pattern.set_current_cells(&[(1,2), (2,3), (3,1), (3,2), (3,3)]);
         pattern
      }
 
      pub fn lightweight_spaceship() -> Pattern {
         let mut pattern = Pattern::new_plain(7, 6);
 
-        pattern.set_cells(
+        pattern.set_current_cells(
             &[(1,1), (1,4), (2,5), (3,1), (3,5), (4,2), (4,3), (4,4), (4,5)]);
         pattern
      }
 
      pub fn midweight_spaceship() -> Pattern {
         let mut pattern = Pattern::new_plain(8, 7);
-        pattern.set_cells(
+        pattern.set_current_cells(
             &[(1,3), (2,1), (2,5), (3,6), (4,1), (4,6), (5,2), (5,3), (5,4), (5,5), (5,6)]);
         pattern
      }
 
      pub fn heavyweight_spaceship() -> Pattern {
         let mut pattern = Pattern::new_plain(9, 7);
-        pattern.set_cells(
+        pattern.set_current_cells(
             &[(1,3), (1,4), (2,1), (2,6), (3,7), (4,1), (4,7), (5,2), (5,3), (5,4), (5,5), (5,6), (5,7)]);
         pattern
      }
@@ -494,13 +515,13 @@ impl Pattern {
     // -------------------------------------------
     pub fn r_pentomino() -> Pattern {
         let mut pattern = Pattern::new_plain(5, 5);
-        pattern.set_cells(&[(1,2), (1,3), (2,1), (2,2), (3,2)]);
+        pattern.set_current_cells(&[(1,2), (1,3), (2,1), (2,2), (3,2)]);
         pattern
     }
 
     pub fn diehard() -> Pattern {
         let mut pattern = Pattern::new_plain(10, 5);
-        pattern.set_cells(&[(1,7), (2,1), (2,2), (3,2), (3,6), (3,7), (3,8)]);
+        pattern.set_current_cells(&[(1,7), (2,1), (2,2), (3,2), (3,6), (3,7), (3,8)]);
         pattern
     }
     // -------------------------------------------
@@ -509,7 +530,7 @@ impl Pattern {
     // -------------------------------------------
     pub fn gosper_glider_gun() -> Pattern {
         let mut pattern = Pattern::new_plain(38, 11);
-        pattern.set_cells(&[
+        pattern.set_current_cells(&[
             (1,25), (2,23), (2,25), (3,13), (3,14), (3,21), (3,22), (3,35), (3,36),
             (4,12), (4,16), (4,21), (4,22), (4,35), (4,36), (5,1), (5,2), (5,11),
             (5,17), (5,21), (5,22), (6,1), (6,2), (6,11), (6,15), (6,17), (6,18),
@@ -523,14 +544,14 @@ impl Pattern {
     // --------------------------------------------
     pub fn minimal_block_engine() -> Pattern {
         let mut pattern = Pattern:: new_plain(10, 8);
-        pattern.set_cells(
+        pattern.set_current_cells(
             &[(1,7), (2,5), (2,7), (2,8), (3,5), (3,7), (4,5), (5,3), (6,1), (6,3)]);
         pattern
     }
 
     pub fn small_block_engine() -> Pattern {
         let mut pattern = Pattern::new_plain(7,7);
-        pattern.set_cells(&[
+        pattern.set_current_cells(&[
             (1,1), (1,2), (1,3), (1,5), (2,1), (3,4), 
             (3,5), (4,2), (4,3), (4,5), (5,1), (5,3), (5,5)
         ]);
@@ -539,7 +560,7 @@ impl Pattern {
 
     pub fn linear_engine() -> Pattern {
         let mut pattern = Pattern::new_plain(41, 3);
-        pattern.set_cells(&[
+        pattern.set_current_cells(&[
             (1,1), (1,2), (1,3), (1,4), (1,5), (1,6), (1,7), (1,8),
             (1,10), (1,11), (1,12), (1,13), (1,14), (1,18), (1,19),
             (1,20), (1,27), (1,28), (1,29), (1,30), (1,31), (1,32),
@@ -553,7 +574,7 @@ impl Pattern {
     // -----------------------------------------------
     pub fn eater_one() -> Pattern {
         let mut pattern = Pattern::new_plain(6, 6);
-        pattern.set_cells(&[(1,1), (1,2), (2,1), (2,3), (3,3), (4,3), (4,4)]);
+        pattern.set_current_cells(&[(1,1), (1,2), (2,1), (2,3), (3,3), (4,3), (4,4)]);
         pattern
     }
     // -----------------------------------------------
