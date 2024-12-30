@@ -161,8 +161,6 @@ const getIndex = (row, column) => {
 const drawCells = () => {
     const cellsPtr = universe.cells();
     const cells = new Uint8Array(memory.buffer, cellsPtr, width * height / 8);
-    const changedCellsPtr = universe.changed_cells();
-    const changedCells = new Uint8Array(memory.buffer, changedCellsPtr, width * height / 8);
 
     drawCellsFrame(width, height, cells, CELL_SIZE, CELL_BORDER);
 };
