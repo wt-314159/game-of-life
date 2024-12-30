@@ -14,6 +14,7 @@ let scale = [1.0, 1.0];
 // Vertex info
 let vertexBuffer;
 let vertexNumComponents = 2;
+let vertexCount;
 let vao;
 
 let shaderProgram;
@@ -67,18 +68,34 @@ function drawCellsFrame(width, height, cells, cellSize, cellBorderSize) {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     gl.useProgram(shaderProgram);
-    let vertexCount = setSquare(cellSize);
     gl.bindVertexArray(vao);
 
     gl.uniform2f(programInfo.uniformLocations.uResolution, gl.canvas.width, gl.canvas.height);
 
+    // Do alive cells first
+    gl.uniform4fv(programInfo.uniformLocations.uGlobalColor, ALIVE_COLOR);
+    let idx = 0;
     for (let row = 0; row < height; row++) {
         for (let col = 0; col < width; col++) {
-            const idx = getIndex(row, col, width);
-
-            gl.uniform4fv(programInfo.uniformLocations.uGlobalColor, bitIsSet(idx, cells) ? ALIVE_COLOR : DEAD_COLOR);
+            idx += 1;
+            if (!bitIsSet(idx, cells)) {
+                continue;
+            }
             gl.uniform2f(programInfo.uniformLocations.uTranslation, col * cellBorderSize + 1, row * cellBorderSize + 1);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
+        }
+    }
 
+    // Do dead cells next
+    gl.uniform4fv(programInfo.uniformLocations.uGlobalColor, DEAD_COLOR);
+    idx = 0;
+    for (let row = 0; row < height; row++) {
+        for (let col = 0; col < width; col++) {
+            idx += 1;
+            if (bitIsSet(idx, cells)) {
+                continue;
+            }
+            gl.uniform2f(programInfo.uniformLocations.uTranslation, col * cellBorderSize + 1, row * cellBorderSize + 1);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
         }
     }
@@ -99,6 +116,10 @@ function setSquare(size) {
     ]), gl.STATIC_DRAW);
 
     return 4;
+}
+
+function setSquareSize(squareSize) {
+    vertexCount = setSquare(squareSize);
 }
 
 function setRectangle(x, y, width, height) {
@@ -148,4 +169,4 @@ const bitIsSet = (n, arr) => {
     return (arr[byte] & mask) === mask;
 };
 
-export { startup, onFrame, drawCellsFrame, clearCellsCanvas };
+export { startup, onFrame, drawCellsFrame, clearCellsCanvas, setSquareSize };
