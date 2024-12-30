@@ -51,10 +51,16 @@
     <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
       in vec2 aVertexPosition;
 
-      uniform vec2 uScalingFactor;
+      uniform vec2 uResolution;
 
       void main() {
-        gl_Position = vec4(aVertexPosition * uScalingFactor, 0.0, 1.0);
+        // convert position in pixels to 0.0 to 1.0
+        vec2 zeroToOne = aVertexPosition / uResolution;
+
+        // convert from 0 -> 1 to -1 -> 1
+        vec2 clipSpace = (zeroToOne * 2.0) - 1.0;
+
+        gl_Position = vec4(clipSpace, 0, 1);
       }
     </script>
 
