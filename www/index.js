@@ -1,7 +1,7 @@
 import { Universe, Pattern } from "game-of-life";
 // Import the WebAssembly memory
 import { memory } from "game-of-life/game_of_life_bg";
-import { startup, onFrame, drawCellsFrame, clearCellsCanvas, setSquareSize } from "./modules/webgl.js";
+import { startup, onFrame, drawCellsFrame, clearCellsCanvas, setSquareSize, onGridSizeChanged } from "./modules/webgl.js";
 
 // constants for cell pixel size and cell colors
 let CELL_SIZE = 6;
@@ -119,6 +119,7 @@ const setCanvasSizeFull = () => {
     foreCanvas.width = canvasSize;
     drawGrid();
     universe = Universe.new_rand(width, height);
+    onGridSizeChanged(width, height);
 }
 
 // Render loop, runs each frame

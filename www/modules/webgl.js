@@ -17,6 +17,13 @@ let vertexNumComponents = 2;
 let vertexCount;
 let vao;
 
+// instance information
+let maxCells;
+let instancePositions;
+let instancePositionBuffer;
+let instanceColors;
+let instanceColorBuffer;
+
 let shaderProgram;
 let programInfo;
 
@@ -37,6 +44,7 @@ function startup() {
 
     shaderProgram = buildShaderProgram(gl, shaderSet);
     programInfo = getProgramLocations(gl, shaderProgram);
+    gl.useProgram(shaderProgram);
     
     aspectRatio = glCanvas.width / glCanvas.height;
     scale = [0.5, 0.5];
@@ -47,20 +55,18 @@ function startup() {
     vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     setPositionAttribute();
-}
 
-function onFrame() {
-    gl.viewport(0, 0, glCanvas.width, glCanvas.height);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    instancePositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, instancePositionBuffer);
+    setInstancePositionAttribute();
 
-    gl.useProgram(shaderProgram);
-    let vertexCount = setSquare(60);
-    gl.bindVertexArray(vao);
-    gl.uniform2f(programInfo.uniformLocations.uResolution, gl.canvas.width, gl.canvas.height);
-    gl.uniform2f(programInfo.uniformLocations.uTranslation, 30, 80);
-    gl.uniform4fv(programInfo.uniformLocations.uGlobalColor, [0.1, 0.7, 0.2, 1.0]);
+    instanceColorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, instanceColorBuffer);
+    setInstanceColorAttribute();
 
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount)
+    gl.uniform2f(programInfo.uniformLocations.resolution, gl.canvas.width, gl.canvas.height);
+    gl.uniform4fv(programInfo.uniformLocations.aliveColor, ALIVE_COLOR);
+    gl.uniform4fv(programInfo.uniformLocations.deadColor, DEAD_COLOR);
 }
 
 function drawCellsFrame(width, height, cells, cellSize, cellBorderSize) {
@@ -70,35 +76,26 @@ function drawCellsFrame(width, height, cells, cellSize, cellBorderSize) {
     gl.useProgram(shaderProgram);
     gl.bindVertexArray(vao);
 
-    gl.uniform2f(programInfo.uniformLocations.uResolution, gl.canvas.width, gl.canvas.height);
-
-    // Do alive cells first
-    gl.uniform4fv(programInfo.uniformLocations.uGlobalColor, ALIVE_COLOR);
     let idx = 0;
     for (let row = 0; row < height; row++) {
         for (let col = 0; col < width; col++) {
             idx += 1;
-            if (!bitIsSet(idx, cells)) {
-                continue;
-            }
-            gl.uniform2f(programInfo.uniformLocations.uTranslation, col * cellBorderSize + 1, row * cellBorderSize + 1);
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
+            
+            instanceColors[idx] = bitIsSet(idx, cells) ? 1 : 0;
+            let doubleIdx = idx * 2;
+            instancePositions[doubleIdx] = col * cellBorderSize + 1;
+            instancePositions[doubleIdx + 1] = row * cellBorderSize + 1;
         }
     }
 
-    // Do dead cells next
-    gl.uniform4fv(programInfo.uniformLocations.uGlobalColor, DEAD_COLOR);
-    idx = 0;
-    for (let row = 0; row < height; row++) {
-        for (let col = 0; col < width; col++) {
-            idx += 1;
-            if (bitIsSet(idx, cells)) {
-                continue;
-            }
-            gl.uniform2f(programInfo.uniformLocations.uTranslation, col * cellBorderSize + 1, row * cellBorderSize + 1);
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
-        }
-    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, instancePositionBuffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, instancePositions);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, instanceColorBuffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, instanceColors);
+    
+    const instanceCount = instancePositions.length / 2;
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount);
 }
 
 function clearCellsCanvas() {
@@ -122,19 +119,17 @@ function setSquareSize(squareSize) {
     vertexCount = setSquare(squareSize);
 }
 
-function setRectangle(x, y, width, height) {
-    var x2 = x + width;
-    var y2 = y + height;
+function onGridSizeChanged(width, height) {
+    maxCells = width * height;
+    instancePositions = new Float32Array(maxCells * 2);
+    gl.bindBuffer(gl.ARRAY_BUFFER, instancePositionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, instancePositions.byteLength, gl.DYNAMIC_DRAW);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        x, y,
-        x2, y,
-        x, y2,
-        x2, y2
-    ]), gl.STATIC_DRAW);
+    instanceColors = new Float32Array(maxCells);
+    gl.bindBuffer(gl.ARRAY_BUFFER, instanceColorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, instanceColors.byteLength, gl.DYNAMIC_DRAW);
 
-    return 4;
+    gl.uniform2f(programInfo.uniformLocations.resolution, gl.canvas.width, gl.canvas.height);
 }
 
 function setPositionAttribute() {
@@ -159,9 +154,33 @@ function setPositionAttribute() {
     // will continue to use vertexBuffer
 }
 
-const getIndex = (row, column, width) => {
-    return row * width + column;
-};
+function setInstancePositionAttribute() {
+    gl.bindBuffer(gl.ARRAY_BUFFER, instancePositionBuffer);
+    gl.enableVertexAttribArray(programInfo.attribLocations.instancePosition);
+    gl.vertexAttribPointer(
+        programInfo.attribLocations.instancePosition,
+        2,
+        gl.FLOAT,
+        false,
+        0,
+        0
+    );
+    gl.vertexAttribDivisor(programInfo.attribLocations.instancePosition, 1);    // one value per instance
+}
+
+function setInstanceColorAttribute() {
+    gl.bindBuffer(gl.ARRAY_BUFFER, instanceColorBuffer);
+    gl.enableVertexAttribArray(programInfo.attribLocations.instanceColor);
+    gl.vertexAttribPointer(
+        programInfo.attribLocations.instanceColor,
+        1,
+        gl.FLOAT,
+        false,
+        0,
+        0
+    );
+    gl.vertexAttribDivisor(programInfo.attribLocations.instanceColor, 1);
+}
 
 const bitIsSet = (n, arr) => {
     const byte = Math.floor(n / 8);
@@ -169,4 +188,4 @@ const bitIsSet = (n, arr) => {
     return (arr[byte] & mask) === mask;
 };
 
-export { startup, onFrame, drawCellsFrame, clearCellsCanvas, setSquareSize };
+export { startup, drawCellsFrame, clearCellsCanvas, setSquareSize, onGridSizeChanged };

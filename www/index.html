@@ -49,33 +49,39 @@
 
     <script src="modules/gl-matrix-min.js"></script>
     <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
-      in vec2 aVertexPosition;
+      in vec2 a_vertexPosition;
+      in vec2 a_instancePosition;
+      in float a_instanceColor;
 
-      uniform vec2 uResolution;
-      uniform vec2 uTranslation;
+      uniform vec2 u_resolution;
+      out float v_colorIndex;
 
       void main() {
         // translate the position using translate vector
-        vec2 position = aVertexPosition + uTranslation;
+        vec2 position = a_vertexPosition + a_instancePosition;
 
         // convert position in pixels to 0.0 to 1.0
-        vec2 zeroToOne = position / uResolution;
+        vec2 zeroToOne = position / u_resolution;
 
         // convert from 0 -> 1 to -1 -> 1
         vec2 clipSpace = (zeroToOne * 2.0) - 1.0;
 
         gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+        v_colorIndex = a_instanceColor;
       }
     </script>
 
     <script id="fragment-shader" type="x-shader/x-fragment">#version 300 es
       precision highp float;
 
-      uniform vec4 uGlobalColor;
+      in float v_colorIndex;
+      uniform vec4 u_aliveColor;
+      uniform vec4 u_deadColor;
+
       out vec4 outColor;
 
       void main() {
-        outColor = uGlobalColor;
+        outColor = mix(u_deadColor, u_aliveColor, v_colorIndex);
       }
     </script>
   </head>

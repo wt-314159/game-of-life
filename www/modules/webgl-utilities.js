@@ -43,13 +43,15 @@ function getProgramLocations(gl, program) {
     var programInfo = {
         program: program,
         attribLocations: {
-            vertexPosition: gl.getAttribLocation(program, "aVertexPosition"),
+            vertexPosition: gl.getAttribLocation(program, "a_vertexPosition"),
+            instancePosition: gl.getAttribLocation(program, "a_instancePosition"),
+            instanceColor: gl.getAttribLocation(program, "a_instanceColor"),
         },
         uniformLocations: {
-            uResolution: gl.getUniformLocation(program, "uResolution"),
-            uTranslation: gl.getUniformLocation(program, "uTranslation"),
-            uGlobalColor: gl.getUniformLocation(program, "uGlobalColor"),
-        }
+            resolution: gl.getUniformLocation(program, "u_resolution"),
+            aliveColor: gl.getUniformLocation(program, "u_aliveColor"),
+            deadColor: gl.getUniformLocation(program, "u_deadColor"),
+        },
     };
     return programInfo;
 }
