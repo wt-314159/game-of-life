@@ -1,7 +1,7 @@
 import { Universe, Pattern } from "game-of-life";
 // Import the WebAssembly memory
 import { memory } from "game-of-life/game_of_life_bg";
-import { startup, onFrame } from "./modules/webgl.js";
+import { startup, onFrame, drawCellsFrame, clearCellsCanvas } from "./modules/webgl.js";
 
 // constants for cell pixel size and cell colors
 let CELL_SIZE = 6;
@@ -125,8 +125,8 @@ const renderLoop = () => {
     fps.render();
     universe.tick();
 
-    onFrame();
-    //drawCells();
+    //onFrame();
+    drawCells();
 
     animationId = requestAnimationFrame(renderLoop);
 };
@@ -162,54 +162,11 @@ const drawCells = () => {
     const changedCellsPtr = universe.changed_cells();
     const changedCells = new Uint8Array(memory.buffer, changedCellsPtr, width * height / 8);
 
-    ctx.beginPath();
-
-    // Fill all alive cells
-    // (N.B. setting context fillStyle is expensive, so set it once
-    // and do all alive cells, then set it again and do all dead,
-    // instead of changing for each cell)
-    ctx.fillStyle = ALIVE_COLOR;
-    for (let row = 0; row < height; row++) {
-        for (let col = 0; col < width; col++) {
-            const idx = getIndex(row, col);
-            // Skip any cells which haven't changed
-            // Only color alive cells at this point
-            if (bitIsSet(idx, changedCells) && bitIsSet(idx, cells)) {
-                ctx.rect(
-                    col * CELL_BORDER + 1,
-                    row * CELL_BORDER + 1,
-                    CELL_SIZE,
-                    CELL_SIZE
-                );
-            }
-        }
-    }
-    ctx.fill();
-
-    ctx.beginPath();
-    // Fill all dead cells
-    ctx.fillStyle = DEAD_COLOR;
-    for (let row = 0; row < height; row++) {
-        for (let col = 0; col < width; col++) {
-            const idx = getIndex(row, col);
-            // Only color dead cells at this point
-            if (!bitIsSet(idx, changedCells) || bitIsSet(idx, cells)) {
-                continue;
-            }
-
-            ctx.rect(
-                col * CELL_BORDER + 1,
-                row * CELL_BORDER + 1,
-                CELL_SIZE,
-                CELL_SIZE
-            );
-        }
-    }
-    ctx.fill();
+    drawCellsFrame(width, height, cells, CELL_SIZE, CELL_BORDER);
 };
 
 const clearCanvas = () => {
-    ctx.clearRect(0, 0, width * CELL_BORDER + 2, height * CELL_BORDER + 2);
+    clearCellsCanvas();
     gridCtx.clearRect(0, 0, width * CELL_BORDER + 2, height * CELL_BORDER + 2);
 }
 

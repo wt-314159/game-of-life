@@ -47,6 +47,7 @@ function getProgramLocations(gl, program) {
         },
         uniformLocations: {
             uResolution: gl.getUniformLocation(program, "uResolution"),
+            uTranslation: gl.getUniformLocation(program, "uTranslation"),
             uGlobalColor: gl.getUniformLocation(program, "uGlobalColor"),
         }
     };

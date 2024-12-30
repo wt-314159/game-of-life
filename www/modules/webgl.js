@@ -5,14 +5,15 @@ const name = 'webgl';
 let gl = null;
 let glCanvas = null;
 
+const DEAD_COLOR = [1, 1, 1, 1.0];
+const ALIVE_COLOR = [0, 0, 0, 1.0];
+
 let aspectRatio;
 let scale = [1.0, 1.0];
 
 // Vertex info
-let vertices;
 let vertexBuffer;
 let vertexNumComponents = 2;
-let vertexCount;
 let vao;
 
 let shaderProgram;
@@ -42,7 +43,8 @@ function startup() {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    createVertexBuffer();
+    vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     setPositionAttribute();
 }
 
@@ -51,24 +53,67 @@ function onFrame() {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     gl.useProgram(shaderProgram);
+    let vertexCount = setSquare(60);
     gl.bindVertexArray(vao);
     gl.uniform2f(programInfo.uniformLocations.uResolution, gl.canvas.width, gl.canvas.height);
+    gl.uniform2f(programInfo.uniformLocations.uTranslation, 30, 80);
     gl.uniform4fv(programInfo.uniformLocations.uGlobalColor, [0.1, 0.7, 0.2, 1.0]);
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount)
 }
 
-function createVertexBuffer() {
-    // Create and bind vertex buffer
-    vertexBuffer = gl.createBuffer();
+function drawCellsFrame(width, height, cells, cellSize, cellBorderSize) {
+    gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(shaderProgram);
+    let vertexCount = setSquare(cellSize);
+    gl.bindVertexArray(vao);
+
+    gl.uniform2f(programInfo.uniformLocations.uResolution, gl.canvas.width, gl.canvas.height);
+
+    for (let row = 0; row < height; row++) {
+        for (let col = 0; col < width; col++) {
+            const idx = getIndex(row, col, width);
+
+            gl.uniform4fv(programInfo.uniformLocations.uGlobalColor, bitIsSet(idx, cells) ? ALIVE_COLOR : DEAD_COLOR);
+            gl.uniform2f(programInfo.uniformLocations.uTranslation, col * cellBorderSize + 1, row * cellBorderSize + 1);
+
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
+        }
+    }
+}
+
+function clearCellsCanvas() {
+    gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+}
+
+function setSquare(size) {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0, 0,
+        size, 0,
+        0, size,
+        size, size
+    ]), gl.STATIC_DRAW);
 
-    // create array of vertices for a square
-    vertices = [80, 80, 20, 80, 80, 20, 20, 20];
-    // Fill vertex buffer with data
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    return 4;
+}
 
-    vertexCount = vertices.length / vertexNumComponents;
+function setRectangle(x, y, width, height) {
+    var x2 = x + width;
+    var y2 = y + height;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        x, y,
+        x2, y,
+        x, y2,
+        x2, y2
+    ]), gl.STATIC_DRAW);
+
+    return 4;
 }
 
 function setPositionAttribute() {
@@ -93,4 +138,14 @@ function setPositionAttribute() {
     // will continue to use vertexBuffer
 }
 
-export { startup, onFrame };
+const getIndex = (row, column, width) => {
+    return row * width + column;
+};
+
+const bitIsSet = (n, arr) => {
+    const byte = Math.floor(n / 8);
+    const mask = 1 << (n % 8);
+    return (arr[byte] & mask) === mask;
+};
+
+export { startup, onFrame, drawCellsFrame, clearCellsCanvas };
