@@ -17,7 +17,7 @@ let programInfo;
 
 function startup() {
     glCanvas = document.getElementById("game-layer");
-    gl = glCanvas.getContext("webgl");
+    gl = glCanvas.getContext("webgl2");
 
     const shaderSet = [
         { 
