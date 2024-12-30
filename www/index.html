@@ -46,6 +46,29 @@
         z-index: 1;
       }
     </style>
+
+    <script src="modules/gl-matrix-min.js"></script>
+    <script id="vertex-shader" type="x-shader/x-vertex">
+      attribute vec2 aVertexPosition;
+
+      uniform vec2 uScalingFactor;
+
+      void main() {
+        gl_Position = vec4(aVertexPosition * uScalingFactor, 0.0, 1.0);
+      }
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+      #ifdef GL_ES
+        precision highp float;
+      #endif
+
+      uniform vec4 uGlobalColor;
+
+      void main() {
+        gl_FragColor = uGlobalColor;
+      }
+    </script>
   </head>
   <body>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
