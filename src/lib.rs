@@ -7,8 +7,9 @@ use fixedbitset::FixedBitSet;
 use web_sys::console;
 use wasm_bindgen::prelude::*;
 use std:: {
-    cmp:: { max, min },
-    fmt, ops::Index
+    cmp::min,
+    fmt,
+    mem,
 };
 
 // A macro to provide console logging syntax
@@ -39,84 +40,8 @@ impl<'a> Drop for Timer<'a> {
 pub struct Universe {
     width: u32,
     height: u32,
-    cells: Cells,
-}
-
-pub struct Cells {
-    first: FixedBitSet,
-    second: FixedBitSet,
-    show_second: bool
-}
-
-impl Cells {
-    fn with_capacity(size: usize) -> Cells {
-        let first = FixedBitSet::with_capacity(size);
-        let second = FixedBitSet::with_capacity(size);
-        Cells { first, second, show_second: false }
-    }
-
-    fn cells(&self) -> *const usize {
-        if self.show_second {
-            self.second.as_slice().as_ptr()
-        } else {
-            self.first.as_slice().as_ptr()
-        }
-    }
-
-    fn get_cells(&self) -> &FixedBitSet {
-        if self.show_second {
-            &self.second
-        } else {
-            &self.first
-        }
-    }
-
-    fn set(&mut self, bit: usize, enabled: bool) {
-        // set the not shown bits
-        if self.show_second {
-            self.first.set(bit, enabled);
-        } else {
-            self.second.set(bit, enabled);
-        }
-    }
-
-    fn set_current(&mut self, bit: usize, enabled: bool) {
-        // set the shown bits
-        if self.show_second {
-            self.second.set(bit, enabled);
-        } else {
-            self.first.set(bit, enabled);
-        }
-    }
-
-    fn len(&self) -> usize {
-        self.first.len()
-    }
-
-    fn toggle(&mut self, bit: usize) {
-        // toggle the current bits, not the buffered set
-        if self.show_second {
-            self.second.toggle(bit);
-        } else {
-            self.first.toggle(bit);
-        }
-    }
-
-    fn show_next(&mut self) {
-        self.show_second = !self.show_second;
-    }
-}
-
-impl Index<usize> for Cells {
-    type Output = bool;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        if self.show_second {
-            &self.second[index]
-        } else {
-            &self.first[index]
-        }
-    }
+    current: FixedBitSet,
+    next: FixedBitSet
 }
 
 // Pattern struct to hold various patterns we might want
@@ -127,60 +52,60 @@ impl Index<usize> for Cells {
 type Pattern = Universe;
 
 impl Universe {
-    fn get_index(&self, row: u32, column: u32) -> usize {
-        (row * self.width + column) as usize
+    fn get_index(width: u32, row: u32, column: u32) -> usize {
+        (row * width + column) as usize
     }
 
-    fn live_neighbour_count(&self, row: u32, column: u32) -> u8 {
+    fn live_neighbour_count(width: u32, height: u32, cells: &FixedBitSet, row: u32, column: u32) -> u8 {
         let mut count = 0;
 
         let north = if row == 0 {
-            self.height - 1
+            height - 1
         } else {
             row - 1
         };
 
         let west = if column == 0 {
-            self.width - 1
+            width - 1
         } else {
             column - 1
         };
 
-        let east = if column == self.width - 1 {
+        let east = if column == width - 1 {
             0
         } else {
             column + 1
         };
 
-        let south = if row == self.height - 1 {
+        let south = if row == height - 1 {
             0
         } else {
             row + 1
         };
 
-        let nw = self.get_index(north, west);
-        count += self.cells[nw] as u8;
+        let nw = Self::get_index(width, north, west);
+        count += cells[nw] as u8;
 
-        let n = self.get_index(north, column);
-        count += self.cells[n] as u8;
+        let n = Self::get_index(width, north, column);
+        count += cells[n] as u8;
 
-        let ne = self.get_index(north, east);
-        count += self.cells[ne] as u8;
+        let ne = Self::get_index(width, north, east);
+        count += cells[ne] as u8;
 
-        let w = self.get_index(row, west);
-        count += self.cells[w] as u8;
+        let w = Self::get_index(width, row, west);
+        count += cells[w] as u8;
 
-        let e = self.get_index(row, east);
-        count += self.cells[e] as u8;
+        let e = Self::get_index(width, row, east);
+        count += cells[e] as u8;
 
-        let sw = self.get_index(south, west);
-        count += self.cells[sw] as u8;
+        let sw = Self::get_index(width, south, west);
+        count += cells[sw] as u8;
 
-        let s = self.get_index(south, column);
-        count += self.cells[s] as u8;
+        let s = Self::get_index(width, south, column);
+        count += cells[s] as u8;
 
-        let se = self.get_index(south, east);
-        count += self.cells[se] as u8;
+        let se = Self::get_index(width, south, east);
+        count += cells[se] as u8;
         
         count
     }
@@ -202,7 +127,7 @@ impl Universe {
     fn get_angle_index(&self, row: u32, col: u32, angle: u32) -> usize {
         match angle {
             90 => ((self.height - col - 1) * self.width + row) as usize, 
-            180 => self.cells.len() - (row * self.width + col + 1) as usize,
+            180 => self.current.len() - (row * self.width + col + 1) as usize,
             270 => (col * self.width + (self.width - row - 1)) as usize,
             _ => (row * self.width + col) as usize
         }
@@ -216,43 +141,28 @@ impl Universe {
         // Enable logging for panics
         utils::set_panic_hook();
         let size = (width * height) as usize;
-        let cells = Cells::with_capacity(size);
-        Universe { width, height, cells }
-    }
-
-    pub fn new_pattern(width: u32, height: u32) -> Universe {
-        // Enable logging for panics
-        utils::set_panic_hook();
-        let size = (width * height) as usize;
-        let mut cells = Cells::with_capacity(size);
-
-        for i in 0..size {
-            let alive = i % 2 == 0 || i % 7 == 0;
-            cells.set(i, alive);
-        }
-        cells.show_next();
-        Universe {
-            width,
-            height,
-            cells,
-        }
+        let current = FixedBitSet::with_capacity(size);
+        let next = FixedBitSet::with_capacity(size);
+        Universe { width, height, current, next }
     }
 
     pub fn new_rand(width: u32, height: u32) -> Universe {
         // Enable logging for panics
         utils::set_panic_hook();
         let size = (width * height) as usize;
-        let mut cells = Cells::with_capacity(size);
+        let mut current = FixedBitSet::with_capacity(size);
+        let next = FixedBitSet::with_capacity(size);
 
         for i in 0..size{
             let state = js_sys::Math::random() < 0.5;
-            cells.set(i, state);
+            current.set(i, state);
         }
-        cells.show_next();
+        
         Universe {
             width,
             height,
-            cells,
+            current,
+            next
         }
     }
 
@@ -263,7 +173,8 @@ impl Universe {
     pub fn set_width(&mut self, width: u32) {
         self.width = width;
         let size = (width * self.height) as usize;
-        self.cells = Cells::with_capacity(size);
+        self.current = FixedBitSet::with_capacity(size);
+        self.next = FixedBitSet::with_capacity(size);
     } 
 
     pub fn height(&self) -> u32 {
@@ -273,21 +184,26 @@ impl Universe {
     pub fn set_height(&mut self, height: u32) {
         self.height = height;
         let size = (self.width * height) as usize;
-        self.cells = Cells::with_capacity(size);
+        self.current = FixedBitSet::with_capacity(size);
+        self.next = FixedBitSet::with_capacity(size);
     }
 
     pub fn cells(&self) -> *const usize {
-        self.cells.cells()
+        self.current.as_slice().as_ptr()
     }
 
     pub fn tick(&mut self) {
+        let current = &self.current;
+        let width = self.width;
+        let height = self.height;
+        let next = &mut self.next;
         for row in 0..self.height {
             for col in 0..self.width{
-                let idx = self.get_index(row, col);
-                let cell = self.cells[idx];
-                let live_neighbours = self.live_neighbour_count(row, col);
+                let idx = Self::get_index(width, row, col);
+                let cell = current[idx];
+                let live_neighbours = Self::live_neighbour_count(width, height, current, row, col);
                 
-                self.cells.set(idx, match(cell, live_neighbours) {
+                next.set(idx, match(cell, live_neighbours) {
                     // Live cells with less than 2 neighbours die, underpopulation
                     (true, x) if x < 2 => false,
                     // Live cells with more than 3 neighbours die, overpopulation
@@ -299,12 +215,12 @@ impl Universe {
                 });
             }
         }
-        self.cells.show_next();
+        mem::swap(&mut self.current, &mut self.next);
     }
 
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
-        let idx = self.get_index(row, column);
-        self.cells.toggle(idx);
+        let idx = Self::get_index(self.width, row, column);
+        self.current.toggle(idx);
     }
 
     pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32, angle: u32) {
@@ -315,10 +231,10 @@ impl Universe {
             let u_row = r + row;
             for c in 0..max_col {
                 let u_col = c + column;
-                let u_idx = self.get_index(u_row, u_col);
+                let u_idx = Self::get_index(self.width, u_row, u_col);
                 let p_idx = pattern.get_angle_index(r, c, angle);
 
-                self.cells.set_current(u_idx, pattern.cells[p_idx]);
+                self.current.set(u_idx, pattern.current[p_idx]);
             } 
         }
     }
@@ -334,21 +250,14 @@ impl Universe {
 impl Universe {
     // Get all the cells in the universe
     pub fn get_cells(&self) -> &FixedBitSet {
-        &self.cells.get_cells()
+        &self.current
     }
 
     // Set cells to be alive by passing row and col
     pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
         for (row, col) in cells.iter().cloned() {
-            let idx = self.get_index(row, col);
-            self.cells.set(idx, true);
-        }
-    }
-
-    pub fn set_current_cells(&mut self, cells: &[(u32, u32)]) {
-        for (row, col) in cells.iter().cloned() {
-            let idx = self.get_index(row, col);
-            self.cells.set_current(idx, true);
+            let idx = Self::get_index(self.width, row, col);
+            self.current.set(idx, true);
         }
     }
 }
@@ -357,8 +266,8 @@ impl fmt::Display for Universe {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for row in 0..self.height {
             for col in 0..self.width {
-                let idx = self.get_index(row, col);
-                let symbol = if self.cells[idx] { '◼' } else { '◻' };
+                let idx = Self::get_index(self.width, row, col);
+                let symbol = if self.current[idx] { '◼' } else { '◻' };
                 write!(f, "{}", symbol)?;
             }
             write!(f, "\n")?;
@@ -372,8 +281,9 @@ impl fmt::Display for Universe {
 impl Pattern {
     fn new_plain(width: u32, height: u32) -> Pattern {
         let size = (width * height) as usize;
-        let cells = Cells::with_capacity(size);
-        Pattern { width, height, cells }
+        let current = FixedBitSet::with_capacity(size);
+        let next = FixedBitSet::with_capacity(0);
+        Pattern { width, height, current, next }
     }
 
     // Constructor methods for simple oscillators
@@ -417,7 +327,7 @@ impl Pattern {
     pub fn pulsar() -> Pattern {
         let mut pattern = Pattern::new_plain(17, 17);
 
-        pattern.set_current_cells(&[
+        pattern.set_cells(&[
             (2,4), (2,5), (2,6), (2,10), (2,11), (2,12), 
             (4,2), (4,7), (4,9),(4,14),
             (5,2), (5,7), (5,9),(5,14),
@@ -433,7 +343,7 @@ impl Pattern {
 
     pub fn pentadecathlon() -> Pattern {
         let mut pattern = Pattern::new_plain(11, 18);
-        pattern.set_current_cells(
+        pattern.set_cells(
             &[(4,5), (5,5), (6,4), (6,6), (7,5), (8,5), (9,5), (10,5), (11,4), (11,6), (12,5), (13,5)]);
         pattern
     }
@@ -444,28 +354,28 @@ impl Pattern {
      pub fn glider() -> Pattern {
         let mut pattern = Pattern::new_plain(5, 5);
 
-        pattern.set_current_cells(&[(1,2), (2,3), (3,1), (3,2), (3,3)]);
+        pattern.set_cells(&[(1,2), (2,3), (3,1), (3,2), (3,3)]);
         pattern
      }
 
      pub fn lightweight_spaceship() -> Pattern {
         let mut pattern = Pattern::new_plain(7, 6);
 
-        pattern.set_current_cells(
+        pattern.set_cells(
             &[(1,1), (1,4), (2,5), (3,1), (3,5), (4,2), (4,3), (4,4), (4,5)]);
         pattern
      }
 
      pub fn midweight_spaceship() -> Pattern {
         let mut pattern = Pattern::new_plain(8, 7);
-        pattern.set_current_cells(
+        pattern.set_cells(
             &[(1,3), (2,1), (2,5), (3,6), (4,1), (4,6), (5,2), (5,3), (5,4), (5,5), (5,6)]);
         pattern
      }
 
      pub fn heavyweight_spaceship() -> Pattern {
         let mut pattern = Pattern::new_plain(9, 7);
-        pattern.set_current_cells(
+        pattern.set_cells(
             &[(1,3), (1,4), (2,1), (2,6), (3,7), (4,1), (4,7), (5,2), (5,3), (5,4), (5,5), (5,6), (5,7)]);
         pattern
      }
@@ -475,13 +385,13 @@ impl Pattern {
     // -------------------------------------------
     pub fn r_pentomino() -> Pattern {
         let mut pattern = Pattern::new_plain(5, 5);
-        pattern.set_current_cells(&[(1,2), (1,3), (2,1), (2,2), (3,2)]);
+        pattern.set_cells(&[(1,2), (1,3), (2,1), (2,2), (3,2)]);
         pattern
     }
 
     pub fn diehard() -> Pattern {
         let mut pattern = Pattern::new_plain(10, 5);
-        pattern.set_current_cells(&[(1,7), (2,1), (2,2), (3,2), (3,6), (3,7), (3,8)]);
+        pattern.set_cells(&[(1,7), (2,1), (2,2), (3,2), (3,6), (3,7), (3,8)]);
         pattern
     }
     // -------------------------------------------
@@ -490,7 +400,7 @@ impl Pattern {
     // -------------------------------------------
     pub fn gosper_glider_gun() -> Pattern {
         let mut pattern = Pattern::new_plain(38, 11);
-        pattern.set_current_cells(&[
+        pattern.set_cells(&[
             (1,25), (2,23), (2,25), (3,13), (3,14), (3,21), (3,22), (3,35), (3,36),
             (4,12), (4,16), (4,21), (4,22), (4,35), (4,36), (5,1), (5,2), (5,11),
             (5,17), (5,21), (5,22), (6,1), (6,2), (6,11), (6,15), (6,17), (6,18),
@@ -504,14 +414,14 @@ impl Pattern {
     // --------------------------------------------
     pub fn minimal_block_engine() -> Pattern {
         let mut pattern = Pattern:: new_plain(10, 8);
-        pattern.set_current_cells(
+        pattern.set_cells(
             &[(1,7), (2,5), (2,7), (2,8), (3,5), (3,7), (4,5), (5,3), (6,1), (6,3)]);
         pattern
     }
 
     pub fn small_block_engine() -> Pattern {
         let mut pattern = Pattern::new_plain(7,7);
-        pattern.set_current_cells(&[
+        pattern.set_cells(&[
             (1,1), (1,2), (1,3), (1,5), (2,1), (3,4), 
             (3,5), (4,2), (4,3), (4,5), (5,1), (5,3), (5,5)
         ]);
@@ -520,7 +430,7 @@ impl Pattern {
 
     pub fn linear_engine() -> Pattern {
         let mut pattern = Pattern::new_plain(41, 3);
-        pattern.set_current_cells(&[
+        pattern.set_cells(&[
             (1,1), (1,2), (1,3), (1,4), (1,5), (1,6), (1,7), (1,8),
             (1,10), (1,11), (1,12), (1,13), (1,14), (1,18), (1,19),
             (1,20), (1,27), (1,28), (1,29), (1,30), (1,31), (1,32),
@@ -534,7 +444,7 @@ impl Pattern {
     // -----------------------------------------------
     pub fn eater_one() -> Pattern {
         let mut pattern = Pattern::new_plain(6, 6);
-        pattern.set_current_cells(&[(1,1), (1,2), (2,1), (2,3), (3,3), (4,3), (4,4)]);
+        pattern.set_cells(&[(1,1), (1,2), (2,1), (2,3), (3,3), (4,3), (4,4)]);
         pattern
     }
     // -----------------------------------------------
