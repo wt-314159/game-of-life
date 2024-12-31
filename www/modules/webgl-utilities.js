@@ -49,8 +49,9 @@ function getProgramLocations(gl, program) {
         },
         uniformLocations: {
             resolution: gl.getUniformLocation(program, "u_resolution"),
-            aliveColor: gl.getUniformLocation(program, "u_aliveColor"),
-            deadColor: gl.getUniformLocation(program, "u_deadColor"),
+            aliveColor: gl.getUniformLocation(program, "u_colors[1]"),
+            deadColor: gl.getUniformLocation(program, "u_colors[0]"),
+            colors: gl.getUniformLocation(program, "u_colors"),
         },
     };
     return programInfo;

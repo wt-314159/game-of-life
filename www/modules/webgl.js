@@ -125,7 +125,7 @@ function onGridSizeChanged(width, height) {
     gl.bindBuffer(gl.ARRAY_BUFFER, instancePositionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, instancePositions.byteLength, gl.DYNAMIC_DRAW);
 
-    instanceColors = new Float32Array(maxCells);
+    instanceColors = new Int8Array(maxCells);
     gl.bindBuffer(gl.ARRAY_BUFFER, instanceColorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, instanceColors.byteLength, gl.DYNAMIC_DRAW);
 
@@ -171,10 +171,10 @@ function setInstancePositionAttribute() {
 function setInstanceColorAttribute() {
     gl.bindBuffer(gl.ARRAY_BUFFER, instanceColorBuffer);
     gl.enableVertexAttribArray(programInfo.attribLocations.instanceColor);
-    gl.vertexAttribPointer(
+    gl.vertexAttribIPointer(
         programInfo.attribLocations.instanceColor,
         1,
-        gl.FLOAT,
+        gl.BYTE,
         false,
         0,
         0

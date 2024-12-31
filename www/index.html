@@ -51,10 +51,10 @@
     <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
       in vec2 a_vertexPosition;
       in vec2 a_instancePosition;
-      in float a_instanceColor;
+      in int a_instanceColor;
 
       uniform vec2 u_resolution;
-      out float v_colorIndex;
+      flat out int v_colorIndex;
 
       void main() {
         // translate the position using translate vector
@@ -74,14 +74,13 @@
     <script id="fragment-shader" type="x-shader/x-fragment">#version 300 es
       precision highp float;
 
-      in float v_colorIndex;
-      uniform vec4 u_aliveColor;
-      uniform vec4 u_deadColor;
+      flat in int v_colorIndex;
+      uniform vec4 u_colors[2];   // array of colors
 
       out vec4 outColor;
 
       void main() {
-        outColor = mix(u_deadColor, u_aliveColor, v_colorIndex);
+        outColor = u_colors[v_colorIndex];
       }
     </script>
   </head>
