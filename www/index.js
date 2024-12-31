@@ -154,10 +154,6 @@ const drawGrid = () => {
     gridCtx.stroke();
 };
 
-const getIndex = (row, column) => {
-    return row * width + column;
-};
-
 const drawCells = () => {
     const cellsPtr = universe.cells();
     const cells = new Uint8Array(memory.buffer, cellsPtr, width * height / 8);
@@ -182,12 +178,6 @@ const clearCanvasRedrawCells = () => {
     drawCells();
 };
 // ----------------------------------------------------
-
-const bitIsSet = (n, arr) => {
-    const byte = Math.floor(n / 8);
-    const mask = 1 << (n % 8);
-    return (arr[byte] & mask) === mask;
-};
 
 // Methods for play and pause functionality
 // ----------------------------------------
