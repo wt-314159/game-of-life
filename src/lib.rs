@@ -39,84 +39,7 @@ impl<'a> Drop for Timer<'a> {
 pub struct Universe {
     width: u32,
     height: u32,
-    cells: Cells,
-}
-
-pub struct Cells {
-    first: FixedBitSet,
-    second: FixedBitSet,
-    show_second: bool
-}
-
-impl Cells {
-    fn with_capacity(size: usize) -> Cells {
-        let first = FixedBitSet::with_capacity(size);
-        let second = FixedBitSet::with_capacity(size);
-        Cells { first, second, show_second: false }
-    }
-
-    fn cells(&self) -> *const usize {
-        if self.show_second {
-            self.second.as_slice().as_ptr()
-        } else {
-            self.first.as_slice().as_ptr()
-        }
-    }
-
-    fn get_cells(&self) -> &FixedBitSet {
-        if self.show_second {
-            &self.second
-        } else {
-            &self.first
-        }
-    }
-
-    fn set(&mut self, bit: usize, enabled: bool) {
-        // set the not shown bits
-        if self.show_second {
-            self.first.set(bit, enabled);
-        } else {
-            self.second.set(bit, enabled);
-        }
-    }
-
-    fn set_current(&mut self, bit: usize, enabled: bool) {
-        // set the shown bits
-        if self.show_second {
-            self.second.set(bit, enabled);
-        } else {
-            self.first.set(bit, enabled);
-        }
-    }
-
-    fn len(&self) -> usize {
-        self.first.len()
-    }
-
-    fn toggle(&mut self, bit: usize) {
-        // toggle the current bits, not the buffered set
-        if self.show_second {
-            self.second.toggle(bit);
-        } else {
-            self.first.toggle(bit);
-        }
-    }
-
-    fn show_next(&mut self) {
-        self.show_second = !self.show_second;
-    }
-}
-
-impl Index<usize> for Cells {
-    type Output = bool;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        if self.show_second {
-            &self.second[index]
-        } else {
-            &self.first[index]
-        }
-    }
+    cells: FixedBitSet,
 }
 
 // Pattern struct to hold various patterns we might want
@@ -216,7 +139,7 @@ impl Universe {
         // Enable logging for panics
         utils::set_panic_hook();
         let size = (width * height) as usize;
-        let cells = Cells::with_capacity(size);
+        let cells = FixedBitSet::with_capacity(size);
         Universe { width, height, cells }
     }
 
@@ -224,13 +147,13 @@ impl Universe {
         // Enable logging for panics
         utils::set_panic_hook();
         let size = (width * height) as usize;
-        let mut cells = Cells::with_capacity(size);
+        let mut cells = FixedBitSet::with_capacity(size);
 
         for i in 0..size {
             let alive = i % 2 == 0 || i % 7 == 0;
             cells.set(i, alive);
         }
-        cells.show_next();
+        
         Universe {
             width,
             height,
@@ -242,13 +165,13 @@ impl Universe {
         // Enable logging for panics
         utils::set_panic_hook();
         let size = (width * height) as usize;
-        let mut cells = Cells::with_capacity(size);
+        let mut cells = FixedBitSet::with_capacity(size);
 
         for i in 0..size{
             let state = js_sys::Math::random() < 0.5;
             cells.set(i, state);
         }
-        cells.show_next();
+        
         Universe {
             width,
             height,
@@ -263,7 +186,7 @@ impl Universe {
     pub fn set_width(&mut self, width: u32) {
         self.width = width;
         let size = (width * self.height) as usize;
-        self.cells = Cells::with_capacity(size);
+        self.cells = FixedBitSet::with_capacity(size);
     } 
 
     pub fn height(&self) -> u32 {
@@ -273,21 +196,22 @@ impl Universe {
     pub fn set_height(&mut self, height: u32) {
         self.height = height;
         let size = (self.width * height) as usize;
-        self.cells = Cells::with_capacity(size);
+        self.cells = FixedBitSet::with_capacity(size);
     }
 
     pub fn cells(&self) -> *const usize {
-        self.cells.cells()
+        self.cells.as_slice().as_ptr()
     }
 
     pub fn tick(&mut self) {
+        let mut next: FixedBitSet = self.cells.clone();
         for row in 0..self.height {
             for col in 0..self.width{
                 let idx = self.get_index(row, col);
                 let cell = self.cells[idx];
                 let live_neighbours = self.live_neighbour_count(row, col);
                 
-                self.cells.set(idx, match(cell, live_neighbours) {
+                next.set(idx, match(cell, live_neighbours) {
                     // Live cells with less than 2 neighbours die, underpopulation
                     (true, x) if x < 2 => false,
                     // Live cells with more than 3 neighbours die, overpopulation
@@ -299,7 +223,7 @@ impl Universe {
                 });
             }
         }
-        self.cells.show_next();
+        self.cells = next;
     }
 
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
@@ -318,7 +242,7 @@ impl Universe {
                 let u_idx = self.get_index(u_row, u_col);
                 let p_idx = pattern.get_angle_index(r, c, angle);
 
-                self.cells.set_current(u_idx, pattern.cells[p_idx]);
+                self.cells.set(u_idx, pattern.cells[p_idx]);
             } 
         }
     }
@@ -334,7 +258,7 @@ impl Universe {
 impl Universe {
     // Get all the cells in the universe
     pub fn get_cells(&self) -> &FixedBitSet {
-        &self.cells.get_cells()
+        &self.cells
     }
 
     // Set cells to be alive by passing row and col
@@ -348,7 +272,7 @@ impl Universe {
     pub fn set_current_cells(&mut self, cells: &[(u32, u32)]) {
         for (row, col) in cells.iter().cloned() {
             let idx = self.get_index(row, col);
-            self.cells.set_current(idx, true);
+            self.cells.set(idx, true);
         }
     }
 }
@@ -372,7 +296,7 @@ impl fmt::Display for Universe {
 impl Pattern {
     fn new_plain(width: u32, height: u32) -> Pattern {
         let size = (width * height) as usize;
-        let cells = Cells::with_capacity(size);
+        let cells = FixedBitSet::with_capacity(size);
         Pattern { width, height, cells }
     }
 
