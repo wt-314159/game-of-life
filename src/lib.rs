@@ -12,6 +12,8 @@ use std:: {
     mem,
 };
 
+const USIZE_BITS: usize = mem::size_of::<usize>() * 8;
+
 // A macro to provide console logging syntax
 macro_rules! log {
     ( $( $t:tt )* ) => {
@@ -40,8 +42,9 @@ impl<'a> Drop for Timer<'a> {
 pub struct Universe {
     width: u32,
     height: u32,
-    current: FixedBitSet,
-    next: FixedBitSet
+    cells: FixedBitSet,
+    curr_idx_offset: usize,
+    next_idx_offset: usize
 }
 
 // Pattern struct to hold various patterns we might want
@@ -52,60 +55,60 @@ pub struct Universe {
 type Pattern = Universe;
 
 impl Universe {
-    fn get_index(width: u32, row: u32, column: u32) -> usize {
-        (row * width + column) as usize
+    fn get_index(&self, row: u32, column: u32) -> usize {
+        (row * self.width + column) as usize
     }
 
-    fn live_neighbour_count(width: u32, height: u32, cells: &FixedBitSet, row: u32, column: u32) -> u8 {
+    fn live_neighbour_count(&self, row: u32, column: u32) -> u8 {
         let mut count = 0;
 
         let north = if row == 0 {
-            height - 1
+            self.height - 1
         } else {
             row - 1
         };
 
         let west = if column == 0 {
-            width - 1
+            self.width - 1
         } else {
             column - 1
         };
 
-        let east = if column == width - 1 {
+        let east = if column == self.width - 1 {
             0
         } else {
             column + 1
         };
 
-        let south = if row == height - 1 {
+        let south = if row == self.height - 1 {
             0
         } else {
             row + 1
         };
 
-        let nw = Self::get_index(width, north, west);
-        count += cells[nw] as u8;
+        let nw = self.get_index(north, west) + self.curr_idx_offset;
+        count += self.cells[nw] as u8;
 
-        let n = Self::get_index(width, north, column);
-        count += cells[n] as u8;
+        let n = self.get_index(north, column) + self.curr_idx_offset;
+        count += self.cells[n] as u8;
 
-        let ne = Self::get_index(width, north, east);
-        count += cells[ne] as u8;
+        let ne = self.get_index(north, east) + self.curr_idx_offset;
+        count += self.cells[ne] as u8;
 
-        let w = Self::get_index(width, row, west);
-        count += cells[w] as u8;
+        let w = self.get_index(row, west) + self.curr_idx_offset;
+        count += self.cells[w] as u8;
 
-        let e = Self::get_index(width, row, east);
-        count += cells[e] as u8;
+        let e = self.get_index(row, east) + self.curr_idx_offset;
+        count += self.cells[e] as u8;
 
-        let sw = Self::get_index(width, south, west);
-        count += cells[sw] as u8;
+        let sw = self.get_index(south, west) + self.curr_idx_offset;
+        count += self.cells[sw] as u8;
 
-        let s = Self::get_index(width, south, column);
-        count += cells[s] as u8;
+        let s = self.get_index(south, column) + self.curr_idx_offset;
+        count += self.cells[s] as u8;
 
-        let se = Self::get_index(width, south, east);
-        count += cells[se] as u8;
+        let se = self.get_index(south, east) + self.curr_idx_offset;
+        count += self.cells[se] as u8;
         
         count
     }
@@ -127,10 +130,15 @@ impl Universe {
     fn get_angle_index(&self, row: u32, col: u32, angle: u32) -> usize {
         match angle {
             90 => ((self.height - col - 1) * self.width + row) as usize, 
-            180 => self.current.len() - (row * self.width + col + 1) as usize,
+            180 => self.cells.len() / 2 - (row * self.width + col + 1) as usize,
             270 => (col * self.width + (self.width - row - 1)) as usize,
             _ => (row * self.width + col) as usize
         }
+    }
+
+    fn get_usize_aligned_size(size: usize) -> usize {
+        let num_bytes = (size as f32 / USIZE_BITS as f32).ceil() as usize;
+        num_bytes * USIZE_BITS
     }
 }
 
@@ -140,29 +148,30 @@ impl Universe {
     pub fn new(width: u32, height: u32) -> Universe {
         // Enable logging for panics
         utils::set_panic_hook();
-        let size = (width * height) as usize;
-        let current = FixedBitSet::with_capacity(size);
-        let next = FixedBitSet::with_capacity(size);
-        Universe { width, height, current, next }
+        let mut size = (width * height) as usize;
+        size = Self::get_usize_aligned_size(size);
+        let cells = FixedBitSet::with_capacity(size * 2);
+        Universe { width, height, cells, curr_idx_offset: 0, next_idx_offset: size }
     }
 
     pub fn new_rand(width: u32, height: u32) -> Universe {
         // Enable logging for panics
         utils::set_panic_hook();
-        let size = (width * height) as usize;
-        let mut current = FixedBitSet::with_capacity(size);
-        let next = FixedBitSet::with_capacity(size);
+        let mut size = (width * height) as usize;
+        size = Self::get_usize_aligned_size(size);
+        let mut cells = FixedBitSet::with_capacity(size * 2);
 
         for i in 0..size{
             let state = js_sys::Math::random() < 0.5;
-            current.set(i, state);
+            cells.set(i, state);
         }
         
         Universe {
             width,
             height,
-            current,
-            next
+            cells,
+            curr_idx_offset: 0,
+            next_idx_offset: size
         }
     }
 
@@ -172,9 +181,10 @@ impl Universe {
 
     pub fn set_width(&mut self, width: u32) {
         self.width = width;
-        let size = (width * self.height) as usize;
-        self.current = FixedBitSet::with_capacity(size);
-        self.next = FixedBitSet::with_capacity(size);
+        let mut size = (width * self.height) as usize;
+        size = Self::get_usize_aligned_size(size);
+        self.cells = FixedBitSet::with_capacity(size * 2);
+        self.next_idx_offset = size;
     } 
 
     pub fn height(&self) -> u32 {
@@ -183,27 +193,34 @@ impl Universe {
 
     pub fn set_height(&mut self, height: u32) {
         self.height = height;
-        let size = (self.width * height) as usize;
-        self.current = FixedBitSet::with_capacity(size);
-        self.next = FixedBitSet::with_capacity(size);
+        let mut size = (self.width * height) as usize;
+        size = Self::get_usize_aligned_size(size);
+        self.cells = FixedBitSet::with_capacity(size * 2);
+        self.next_idx_offset = size;
     }
 
     pub fn cells(&self) -> *const usize {
-        self.current.as_slice().as_ptr()
+        let end_idx = if self.curr_idx_offset == 0 {
+            self.next_idx_offset / USIZE_BITS
+        } else {
+            self.cells.len() / USIZE_BITS
+        };
+        let start_idx = self.curr_idx_offset / USIZE_BITS;
+        let slice = self.cells.as_slice();
+        slice[start_idx..end_idx].as_ptr()
     }
 
     pub fn tick(&mut self) {
-        let current = &self.current;
-        let width = self.width;
-        let height = self.height;
-        let next = &mut self.next;
         for row in 0..self.height {
             for col in 0..self.width{
-                let idx = Self::get_index(width, row, col);
-                let cell = current[idx];
-                let live_neighbours = Self::live_neighbour_count(width, height, current, row, col);
+                let idx = self.get_index(row, col);
+                let curr_idx = idx + self.curr_idx_offset;
+                let next_idx = idx + self.next_idx_offset;
+
+                let cell = self.cells[curr_idx];
+                let live_neighbours = self.live_neighbour_count(row, col);
                 
-                next.set(idx, match(cell, live_neighbours) {
+                self.cells.set(next_idx, match(cell, live_neighbours) {
                     // Live cells with less than 2 neighbours die, underpopulation
                     (true, x) if x < 2 => false,
                     // Live cells with more than 3 neighbours die, overpopulation
@@ -215,12 +232,14 @@ impl Universe {
                 });
             }
         }
-        mem::swap(&mut self.current, &mut self.next);
+        let temp = self.curr_idx_offset;
+        self.curr_idx_offset = self.next_idx_offset;
+        self.next_idx_offset = temp;
     }
 
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
-        let idx = Self::get_index(self.width, row, column);
-        self.current.toggle(idx);
+        let idx = self.get_index(row, column) + self.curr_idx_offset;
+        self.cells.toggle(idx);
     }
 
     pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32, angle: u32) {
@@ -231,10 +250,10 @@ impl Universe {
             let u_row = r + row;
             for c in 0..max_col {
                 let u_col = c + column;
-                let u_idx = Self::get_index(self.width, u_row, u_col);
+                let u_idx = self.get_index(u_row, u_col) + self.curr_idx_offset;
                 let p_idx = pattern.get_angle_index(r, c, angle);
 
-                self.current.set(u_idx, pattern.current[p_idx]);
+                self.cells.set(u_idx, pattern.cells[p_idx]);
             } 
         }
     }
@@ -250,14 +269,14 @@ impl Universe {
 impl Universe {
     // Get all the cells in the universe
     pub fn get_cells(&self) -> &FixedBitSet {
-        &self.current
+        &self.cells
     }
 
     // Set cells to be alive by passing row and col
     pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
         for (row, col) in cells.iter().cloned() {
-            let idx = Self::get_index(self.width, row, col);
-            self.current.set(idx, true);
+            let idx = self.get_index(row, col) + self.curr_idx_offset;
+            self.cells.set(idx, true);
         }
     }
 }
@@ -266,8 +285,8 @@ impl fmt::Display for Universe {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for row in 0..self.height {
             for col in 0..self.width {
-                let idx = Self::get_index(self.width, row, col);
-                let symbol = if self.current[idx] { '◼' } else { '◻' };
+                let idx = self.get_index(row, col) + self.curr_idx_offset;
+                let symbol = if self.cells[idx] { '◼' } else { '◻' };
                 write!(f, "{}", symbol)?;
             }
             write!(f, "\n")?;
@@ -281,9 +300,8 @@ impl fmt::Display for Universe {
 impl Pattern {
     fn new_plain(width: u32, height: u32) -> Pattern {
         let size = (width * height) as usize;
-        let current = FixedBitSet::with_capacity(size);
-        let next = FixedBitSet::with_capacity(0);
-        Pattern { width, height, current, next }
+        let cells = FixedBitSet::with_capacity(size);
+        Pattern { width, height, cells, curr_idx_offset: 0, next_idx_offset: 0 }
     }
 
     // Constructor methods for simple oscillators
