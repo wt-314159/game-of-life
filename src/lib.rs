@@ -1,26 +1,26 @@
 mod utils;
 
+#[cfg(target_arch = "wasm32")]
 extern crate js_sys;
 
-#[cfg(not(feature = "benchmarking"))]
+#[cfg(target_arch = "wasm32")]
 extern crate web_sys;
 
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 
-#[cfg(not(feature = "benchmarking"))]
+use rand::Rng;
+#[cfg(target_arch = "wasm32")]
 use web_sys::console;
 
-#[cfg(not(feature = "benchmarking"))]
-use wasm_bindgen::prelude::*;
 
 use std:: {
     cmp::min,
     fmt,
-    mem,
 };
 
 // A macro to provide console logging syntax
+#[allow(unused_macros)]
 macro_rules! log {
     ( $( $t:tt )* ) => {
         web_sys::console::log_1(&format!( $( $t)* ).into());
@@ -28,12 +28,13 @@ macro_rules! log {
 }
 
 pub struct Timer<'a> {
+    #[allow(dead_code)]
     name: &'a str,
 }
 
 impl<'a> Timer<'a> {
     pub fn new(name: &'a str) -> Timer<'a> {
-        #[cfg(not(feature = "benchmarking"))]
+        #[cfg(target_arch = "wasm32")]
         console::time_with_label(name);
         Timer { name }
     }
@@ -41,12 +42,11 @@ impl<'a> Timer<'a> {
 
 impl<'a> Drop for Timer<'a> {
     fn drop(&mut self) {
-        #[cfg(not(feature = "benchmarking"))]
+        #[cfg(target_arch = "wasm32")]
         console::time_end_with_label(self.name);
     }
 }
 
-#[cfg_attr(not(feature = "benchmarking"), wasm_bindgen)]
 pub struct Universe {
     width: u32,
     height: u32,
@@ -64,60 +64,6 @@ type Pattern = Universe;
 impl Universe {
     fn get_index(width: u32, row: u32, column: u32) -> usize {
         (row * width + column) as usize
-    }
-
-    fn live_neighbour_count(width: u32, height: u32, cells: &FixedBitSet, row: u32, column: u32) -> u8 {
-        let mut count = 0;
-
-        let north = if row == 0 {
-            height - 1
-        } else {
-            row - 1
-        };
-
-        let west = if column == 0 {
-            width - 1
-        } else {
-            column - 1
-        };
-
-        let east = if column == width - 1 {
-            0
-        } else {
-            column + 1
-        };
-
-        let south = if row == height - 1 {
-            0
-        } else {
-            row + 1
-        };
-
-        let nw = Self::get_index(width, north, west);
-        count += cells[nw] as u8;
-
-        let n = Self::get_index(width, north, column);
-        count += cells[n] as u8;
-
-        let ne = Self::get_index(width, north, east);
-        count += cells[ne] as u8;
-
-        let w = Self::get_index(width, row, west);
-        count += cells[w] as u8;
-
-        let e = Self::get_index(width, row, east);
-        count += cells[e] as u8;
-
-        let sw = Self::get_index(width, south, west);
-        count += cells[sw] as u8;
-
-        let s = Self::get_index(width, south, column);
-        count += cells[s] as u8;
-
-        let se = Self::get_index(width, south, east);
-        count += cells[se] as u8;
-        
-        count
     }
 
     fn angle_width(&self, angle: u32) -> u32 {
@@ -153,11 +99,12 @@ impl Universe {
 }
 
 // Public methods, exposed to JavaScript via bindgen
-#[cfg_attr(not(feature = "benchmarking"), wasm_bindgen)]
 impl Universe {
     pub fn new(width: u32, height: u32) -> Universe {
         // Enable logging for panics
+        #[cfg(target_arch = "wasm32")]
         utils::set_panic_hook();
+
         let size = (width * height) as usize;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
@@ -166,13 +113,16 @@ impl Universe {
 
     pub fn new_rand(width: u32, height: u32) -> Universe {
         // Enable logging for panics
+        #[cfg(target_arch = "wasm32")]
         utils::set_panic_hook();
+
         let size = (width * height) as usize;
         let mut current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
 
+        let mut rng = rand::thread_rng();
         for i in 0..size{
-            let state = js_sys::Math::random() < 0.5;
+            let state = rng.gen_bool(0.5);
             current.set(i, state);
         }
         
@@ -277,6 +227,60 @@ impl Universe {
             self.buffers[self.curr_index].set(idx, true);
         }
     }
+
+    pub fn live_neighbour_count(width: u32, height: u32, cells: &FixedBitSet, row: u32, column: u32) -> u8 {
+        let mut count = 0;
+
+        let north = if row == 0 {
+            height - 1
+        } else {
+            row - 1
+        };
+
+        let west = if column == 0 {
+            width - 1
+        } else {
+            column - 1
+        };
+
+        let east = if column == width - 1 {
+            0
+        } else {
+            column + 1
+        };
+
+        let south = if row == height - 1 {
+            0
+        } else {
+            row + 1
+        };
+
+        let nw = Self::get_index(width, north, west);
+        count += cells[nw] as u8;
+
+        let n = Self::get_index(width, north, column);
+        count += cells[n] as u8;
+
+        let ne = Self::get_index(width, north, east);
+        count += cells[ne] as u8;
+
+        let w = Self::get_index(width, row, west);
+        count += cells[w] as u8;
+
+        let e = Self::get_index(width, row, east);
+        count += cells[e] as u8;
+
+        let sw = Self::get_index(width, south, west);
+        count += cells[sw] as u8;
+
+        let s = Self::get_index(width, south, column);
+        count += cells[s] as u8;
+
+        let se = Self::get_index(width, south, east);
+        count += cells[se] as u8;
+        
+        count
+    }
 }
 
 impl fmt::Display for Universe {
@@ -294,7 +298,6 @@ impl fmt::Display for Universe {
 }
 
 // Patterns to create
-#[cfg_attr(not(feature = "benchmarking"), wasm_bindgen)]
 impl Pattern {
     fn new_plain(width: u32, height: u32) -> Pattern {
         let size = (width * height) as usize;
