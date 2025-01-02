@@ -24,14 +24,12 @@ fixedbitset = "0.5.7"
 js-sys = "0.3.76"
 rand = "0.8.5"
 
-# [dependencies.web-sys]
-# version = "0.3.76"
-# features = [
-#    "console",
-# ]
-
 [dev-dependencies]
-# wasm-bindgen-test = "0.3.34"
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[[bench]]
+name = "bench"
+harness = false
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
