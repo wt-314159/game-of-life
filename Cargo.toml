@@ -5,8 +5,8 @@ authors = ["William Train <William.Train@ametek.com>"]
 edition = "2018"
 
 [lib]
-# crate-type = ["cdylib", "rlib"]
 crate-type = ["rlib"]
+bench = false
 
 [features]
 default = ["console_error_panic_hook"]
@@ -33,5 +33,9 @@ harness = false
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
+opt-level = "s"
+lto = true
+
+[profile.bench]
 opt-level = "s"
 lto = true
