@@ -11,3 +11,8 @@ fn universe_ticks(b: &mut test::Bencher) {
         universe.tick();
     })
 }
+
+#[bench]
+fn universe_live_neighbours(b: &mut test::Bencher) {
+    
+}
