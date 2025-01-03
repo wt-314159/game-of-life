@@ -31,7 +31,6 @@ pub struct Universe {
     height: usize,
     buffers: [FixedBitSet; 2],
     #[allow(dead_code)]
-    active_cell_buffers: [Vec<usize>; 2],
     curr_index: usize
 }
 
@@ -86,9 +85,9 @@ impl Universe {
         let (width, height) = (width as usize, height as usize);
         let size = width * height;
         let current = FixedBitSet::with_capacity(size);
-        let next = FixedBitSet::with_capacity(size);
-        let active_cell_buffers = [Vec::new(), Vec::new()];
-        Universe { width, height, buffers: [current, next], active_cell_buffers, curr_index: 0 }
+        let next = FixedBitSet::with_capacity(size); 
+
+        Universe { width, height, buffers: [current, next], curr_index: 0 }
     }
 
     pub fn new_rand(width: u32, height: u32) -> Universe {
@@ -98,14 +97,13 @@ impl Universe {
         let size = width * height;
         let mut current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
-        let active_cell_buffers = [Vec::new(), Vec::new()];
 
         for i in 0..size{
             let state = js_sys::Math::random() < 0.5;
             current.set(i, state);
         }
         
-        Universe { width, height, buffers: [current, next], active_cell_buffers, curr_index: 0 }
+        Universe { width, height, buffers: [current, next], curr_index: 0 }
     }
 
     pub fn width(&self) -> u32 {
@@ -282,8 +280,8 @@ impl Pattern {
         let size = (width * height) as usize;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(0);
-        let active_cell_buffers = [Vec::new(), Vec::new()];
-        Pattern { width, height, buffers: [current, next], active_cell_buffers, curr_index: 0 }
+        
+        Pattern { width, height, buffers: [current, next], curr_index: 0 }
     }
 
     // Constructor methods for simple oscillators
