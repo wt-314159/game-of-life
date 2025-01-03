@@ -219,15 +219,19 @@ impl Universe {
         let east = if col == width - 1 { 0 } else { col + 1 };
         let south = if row == height - 1 { 0 } else { row + 1 };
 
+        let north_row_idx = width * north;
+        let row_idx = width * row;
+        let south_row_idx = width * south;
+
         let indices = [
-            Self::get_index(width, north, west),
-            Self::get_index(width, north, col),
-            Self::get_index(width, north, east),
-            Self::get_index(width, row, west),
-            Self::get_index(width, row, east),
-            Self::get_index(width, south, west),
-            Self::get_index(width, south, col),
-            Self::get_index(width, south, east)
+            north_row_idx + west,
+            north_row_idx + col,
+            north_row_idx + east,
+            row_idx + west,
+            row_idx + east,
+            south_row_idx + west,
+            south_row_idx + col, 
+            south_row_idx + east
         ];
         IntoIterator::into_iter(indices)
     }

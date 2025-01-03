@@ -42,7 +42,7 @@ fn bench_get_neighbours(c: &mut Criterion) {
     for index in [0, 1, width + 1].iter() {
 
         c.bench_with_input(
-            BenchmarkId::new("old", index), 
+            BenchmarkId::new("Get Neighbours", index), 
             index, 
             |b, &index| b.iter(
                 || game_of_life::Universe::get_neighbours(black_box(index), width, height).max()
@@ -50,5 +50,5 @@ fn bench_get_neighbours(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, live_neighbours_benchmark);
+criterion_group!(benches, bench_get_neighbours);
 criterion_main!(benches);
