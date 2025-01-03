@@ -38,9 +38,10 @@ impl<'a> Drop for Timer<'a> {
 
 #[wasm_bindgen]
 pub struct Universe {
-    width: u32,
-    height: u32,
+    width: usize,
+    height: usize,
     buffers: [FixedBitSet; 2],
+    active_cell_buffers: [Vec<usize>; 2],
     curr_index: usize
 }
 
@@ -52,11 +53,53 @@ pub struct Universe {
 type Pattern = Universe;
 
 impl Universe {
-    fn get_index(width: u32, row: u32, column: u32) -> usize {
-        (row * width + column) as usize
+    fn get_index(width: usize, row: usize, column: usize) -> usize {
+        row * width + column
     }
 
-    fn live_neighbour_count(width: u32, height: u32, cells: &FixedBitSet, row: u32, column: u32) -> u8 {
+    fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
+        let i_width = width as isize;
+        let i_height = height as isize;
+        let col = index % width;
+
+        let dn = if index < width - 1 {
+            i_width * (i_height - 1)
+        } else {
+            -i_width
+        };
+
+        let ds = if index > (width - 1) * height {
+            -(i_width * (i_height - 1))
+        } else {
+            i_width
+        };
+
+        let dw = if col == 0 {
+            i_width - 1
+        } else {
+            -1
+        };
+
+        let de = if col == width - 1 {
+            -(i_width - 1)
+        } else {
+            1
+        };
+
+        let drs = vec![dn, 0, ds];
+        drs.into_iter()
+            .flat_map(move |dr| [dw, 0, de].into_iter().map(move |dc| dr + dc).collect::<Vec<isize>>())
+            .filter(|&di| di != 0)
+            .map(move |di: isize| ((index as isize) + di) as usize)
+    }
+
+    fn alt_live_neighbour_count(&self, index: usize) -> usize {
+        Self::get_neighbours(index, self.width, self.height)
+            .filter(|&neighbour| self.buffers[self.curr_index][neighbour])
+            .count()
+    }
+
+    fn live_neighbour_count(width: usize, height: usize, cells: &FixedBitSet, row: usize, column: usize) -> u8 {
         let mut count = 0;
 
         let north = if row == 0 {
@@ -110,21 +153,21 @@ impl Universe {
         count
     }
 
-    fn angle_width(&self, angle: u32) -> u32 {
+    fn angle_width(&self, angle: u32) -> usize {
         match angle {
             90 | 270 => self.height,
             _ => self.width
         }
     }
 
-    fn angle_height(&self, angle: u32) -> u32 {
+    fn angle_height(&self, angle: u32) -> usize {
         match angle {
             90 | 270 => self.width,
             _ => self.height
         }
     }
 
-    fn get_angle_index(&self, row: u32, col: u32, angle: u32) -> usize {
+    fn get_angle_index(&self, row: usize, col: usize, angle: u32) -> usize {
         match angle {
             90 => ((self.height - col - 1) * self.width + row) as usize, 
             180 => self.buffers[0].len() - (row * self.width + col + 1) as usize,
@@ -148,45 +191,49 @@ impl Universe {
     pub fn new(width: u32, height: u32) -> Universe {
         // Enable logging for panics
         utils::set_panic_hook();
-        let size = (width * height) as usize;
+        let (width, height) = (width as usize, height as usize);
+        let size = width * height;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
-        Universe { width, height, buffers: [current, next], curr_index: 0 }
+        let active_cell_buffers = [Vec::new(), Vec::new()];
+        Universe { width, height, buffers: [current, next], active_cell_buffers, curr_index: 0 }
     }
 
     pub fn new_rand(width: u32, height: u32) -> Universe {
         // Enable logging for panics
         utils::set_panic_hook();
-        let size = (width * height) as usize;
+        let (width, height) = (width as usize, height as usize);
+        let size = width * height;
         let mut current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
+        let active_cell_buffers = [Vec::new(), Vec::new()];
 
         for i in 0..size{
             let state = js_sys::Math::random() < 0.5;
             current.set(i, state);
         }
         
-        Universe { width, height, buffers: [current, next], curr_index: 0 }
+        Universe { width, height, buffers: [current, next], active_cell_buffers, curr_index: 0 }
     }
 
     pub fn width(&self) -> u32 {
-        self.width
+        self.width as u32
     }
 
     pub fn set_width(&mut self, width: u32) {
-        self.width = width;
-        let size = (width * self.height) as usize;
+        self.width = width as usize;
+        let size = self.width * self.height;
         self.buffers[0] = FixedBitSet::with_capacity(size);
         self.buffers[1] = FixedBitSet::with_capacity(size);
     } 
 
     pub fn height(&self) -> u32 {
-        self.height
+        self.height as u32
     }
 
     pub fn set_height(&mut self, height: u32) {
-        self.height = height;
-        let size = (self.width * height) as usize;
+        self.height = height as usize;
+        let size = self.width * self.height;
         self.buffers[0] = FixedBitSet::with_capacity(size);
         self.buffers[1] = FixedBitSet::with_capacity(size);
     }
@@ -226,11 +273,12 @@ impl Universe {
     }
 
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
-        let idx = Self::get_index(self.width, row, column);
+        let idx = Self::get_index(self.width, row as usize, column as usize);
         self.buffers[self.curr_index].toggle(idx);
     }
 
     pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32, angle: u32) {
+        let (row, column) = (row as usize, column as usize);
         let max_row = min(row + pattern.angle_height(angle), self.height) - row;
         let max_col = min(column + pattern.angle_width(angle), self.width) - column;
 
@@ -261,7 +309,7 @@ impl Universe {
     }
 
     // Set cells to be alive by passing row and col
-    pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
+    pub fn set_cells(&mut self, cells: &[(usize, usize)]) {
         for (row, col) in cells.iter().cloned() {
             let idx = Self::get_index(self.width, row, col);
             self.buffers[self.curr_index].set(idx, true);
@@ -286,11 +334,12 @@ impl fmt::Display for Universe {
 // Patterns to create
 #[wasm_bindgen]
 impl Pattern {
-    fn new_plain(width: u32, height: u32) -> Pattern {
+    fn new_plain(width: usize, height: usize) -> Pattern {
         let size = (width * height) as usize;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(0);
-        Pattern { width, height, buffers: [current, next], curr_index: 0 }
+        let active_cell_buffers = [Vec::new(), Vec::new()];
+        Pattern { width, height, buffers: [current, next], active_cell_buffers, curr_index: 0 }
     }
 
     // Constructor methods for simple oscillators
