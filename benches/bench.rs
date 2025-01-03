@@ -23,16 +23,26 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
     #[allow(unused_variables)]
     let (width, height) = (width as usize, height as usize);
 
+    let mut group = c.benchmark_group("Live Neighbours");
 
     for index in [0, 1, width].iter() {
-        c.bench_with_input(
-            BenchmarkId::new("Live Neighbours", index),
+        group.bench_with_input(
+            BenchmarkId::new("old", index),
             index,
             |b, &index| b.iter(
                 || universe.index_neighbour_count(black_box(index))
             )
         );
+
+        group.bench_with_input(
+            BenchmarkId::new("new", index),
+            index,
+            |b, &index| b.iter(
+                || universe.new_index_neighbour_count(black_box(index))
+            )
+        );
     }
+    group.finish();
 }
 
 #[allow(dead_code)]
@@ -50,5 +60,5 @@ fn bench_get_neighbours(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, bench_get_neighbours);
+criterion_group!(benches, live_neighbours_benchmark);
 criterion_main!(benches);

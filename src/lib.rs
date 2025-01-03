@@ -261,6 +261,36 @@ impl Universe {
         }
         count
     }
+
+    pub fn new_index_neighbour_count(&self, index: usize) -> u8 {
+        let (width, height) = (self.width, self.height);
+        let cells = &self.buffers[self.curr_index];
+        let row = index / width;
+        let col = index % width;
+
+        let mut count = 0;
+
+        let north = if row == 0 { height - 1 } else { row - 1 };
+        let west = if col == 0 { width - 1 } else { col - 1 };
+        let east = if col == width - 1 { 0 } else { col + 1 };
+        let south = if row == height - 1 { 0 } else { row + 1 };
+
+        let north_row_idx = north * width;
+        let row_idx = row * width;
+        let south_row_idx = south * width;
+
+        unsafe {
+            count += cells.contains_unchecked(north_row_idx + west) as u8;
+            count += cells.contains_unchecked(north_row_idx + col) as u8;
+            count += cells.contains_unchecked(north_row_idx + east) as u8;
+            count += cells.contains_unchecked(row_idx + west) as u8;
+            count += cells.contains_unchecked(row_idx + east) as u8;
+            count += cells.contains_unchecked(south_row_idx + west) as u8;
+            count += cells.contains_unchecked(south_row_idx + col) as u8;
+            count += cells.contains_unchecked(south_row_idx + east) as u8;
+        }
+        count
+    }
 }
 
 impl fmt::Display for Universe {
