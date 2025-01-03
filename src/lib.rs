@@ -249,32 +249,6 @@ impl Universe {
         let east = if col == width - 1 { 0 } else { col + 1 };
         let south = if row == height - 1 { 0 } else { row + 1 };
 
-        unsafe {
-            count += cells.contains_unchecked(Self::get_index(width, north, west)) as u8;
-            count += cells.contains_unchecked(Self::get_index(width, north, col)) as u8;
-            count += cells.contains_unchecked(Self::get_index(width, north, east)) as u8;
-            count += cells.contains_unchecked(Self::get_index(width, row, west)) as u8;
-            count += cells.contains_unchecked(Self::get_index(width, row, east)) as u8;
-            count += cells.contains_unchecked(Self::get_index(width, south, west)) as u8;
-            count += cells.contains_unchecked(Self::get_index(width, south, col)) as u8;
-            count += cells.contains_unchecked(Self::get_index(width, south, east)) as u8;
-        }
-        count
-    }
-
-    pub fn new_index_neighbour_count(&self, index: usize) -> u8 {
-        let (width, height) = (self.width, self.height);
-        let cells = &self.buffers[self.curr_index];
-        let row = index / width;
-        let col = index % width;
-
-        let mut count = 0;
-
-        let north = if row == 0 { height - 1 } else { row - 1 };
-        let west = if col == 0 { width - 1 } else { col - 1 };
-        let east = if col == width - 1 { 0 } else { col + 1 };
-        let south = if row == height - 1 { 0 } else { row + 1 };
-
         let north_row_idx = north * width;
         let row_idx = row * width;
         let south_row_idx = south * width;
@@ -541,5 +515,17 @@ mod tests {
 
         let row_2_col_1 = universe.get_angle_index(2, 1, 270);
         assert_eq!(row_2_col_1, 7);
+    }
+
+    #[test]
+    fn test_get_neighbour() {
+        let indices: Vec<usize> = Universe::get_neighbours(0, 4, 3).collect();
+        
+        let expected_indices = [11, 8, 9, 3, 1, 7, 4, 5];
+
+        assert_eq!(indices.len(), expected_indices.len());
+        for i in 0..expected_indices.len() {
+            assert_eq!(expected_indices[i], indices[i]);
+        }
     }
 }
