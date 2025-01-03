@@ -17,14 +17,6 @@ fn tick_benchmark(c: &mut Criterion) {
     }));
 }
 
-// pub fn alt_live_neighbour_count(&self, index: usize) -> usize {
-//     Self::get_neighbours(index, self.width, self.height)
-//         .filter(|&neighbour| self.buffers[self.curr_index][neighbour])
-//         .count()
-// }
-
-// pub fn live_neighbour_count(width: usize, height: usize, cells: &FixedBitSet, row: usize, column: usize) -> u8 {
-
 #[allow(dead_code)]
 fn live_neighbours_benchmark(c: &mut Criterion) {
     let (width, height) = (200, 200);
@@ -79,5 +71,5 @@ fn bench_get_neighbours(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, live_neighbours_benchmark);
+criterion_group!(benches, bench_get_neighbours);
 criterion_main!(benches);

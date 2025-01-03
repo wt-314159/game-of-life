@@ -1,10 +1,16 @@
 mod utils;
+mod timer;
+mod neighbour_iter;
 extern crate js_sys;
 extern crate web_sys;
 
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 
+use neighbour_iter::NeighbourIter;
+#[allow(unused_imports)]
+use timer::Timer;
+#[allow(unused_imports)]
 use web_sys::console;
 #[allow(unused_imports)]
 use wasm_bindgen::prelude::*;
@@ -18,56 +24,6 @@ use std:: {
 macro_rules! log {
     ( $( $t:tt )* ) => {
         web_sys::console::log_1(&format!( $( $t)* ).into());
-    }
-}
-
-pub struct Timer<'a> {
-    #[allow(dead_code)]
-    name: &'a str,
-}
-
-impl<'a> Timer<'a> {
-    pub fn new(name: &'a str) -> Timer<'a> {
-        console::time_with_label(name);
-        Timer { name }
-    }
-}
-
-impl<'a> Drop for Timer<'a> {
-    fn drop(&mut self) {
-        console::time_end_with_label(self.name);
-    }
-}
-
-struct NeighbourIter {
-    index: usize,
-    width: usize,
-    row: usize,
-    col: usize,
-    north: usize,
-    south: usize,
-    east: usize,
-    west: usize,
-    state: u8
-}
-
-impl Iterator for NeighbourIter {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let result = match self.state {
-            0 => Some(Universe::get_index(self.width, self.north, self.west)),
-            1 => Some(Universe::get_index(self.width, self.north, self.col)),
-            2 => Some(Universe::get_index(self.width, self.north, self.east)),
-            3 => Some(Universe::get_index(self.width, self.row, self.west)),
-            4 => Some(Universe::get_index(self.width, self.row, self.east)),
-            5 => Some(Universe::get_index(self.width, self.south, self.west)),
-            6 => Some(Universe::get_index(self.width, self.south, self.col)),
-            7 => Some(Universe::get_index(self.width, self.south, self.east)),
-            _ => None,
-        };
-        self.state += 1;
-        result
     }
 }
 
@@ -103,37 +59,17 @@ impl Universe {
         let east = if col == width - 1 { 0 } else { col + 1 };
         let south = if row == height - 1 { 0 } else { row + 1 };
 
-        NeighbourIter { index, width, row, col, north, south, east, west, state: 0 }
+        NeighbourIter { width, row, col, north, south, east, west, state: 0 }
     }
 
     pub fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
         let row = index / width;
         let col = index % width;
 
-        let north = if row == 0 {
-            height - 1
-        } else {
-            row - 1
-        };
-
-        let west = if col == 0 {
-            width - 1
-        } else {
-            col - 1
-        };
-
-        let east = if col == width - 1 {
-            0
-        } else {
-            col + 1
-        };
-
-        let south = if row == height - 1 {
-            0
-        } else {
-            row + 1
-        };
-
+        let north = if row == 0 { height - 1 } else { row - 1 };
+        let west = if col == 0 { width - 1 } else { col - 1 };
+        let east = if col == width - 1 { 0 } else { col + 1 };
+        let south = if row == height - 1 { 0 } else { row + 1 };
 
         let indices = [Self::get_index(width, north, west),
         Self::get_index(width, north, col),
