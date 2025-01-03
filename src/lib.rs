@@ -1,16 +1,10 @@
 mod utils;
-
-#[cfg(target_arch = "wasm32")]
 extern crate js_sys;
-
-#[cfg(target_arch = "wasm32")]
 extern crate web_sys;
 
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 
-use rand::Rng;
-#[cfg(target_arch = "wasm32")]
 use web_sys::console;
 #[allow(unused_imports)]
 use wasm_bindgen::prelude::*;
@@ -34,7 +28,6 @@ pub struct Timer<'a> {
 
 impl<'a> Timer<'a> {
     pub fn new(name: &'a str) -> Timer<'a> {
-        #[cfg(target_arch = "wasm32")]
         console::time_with_label(name);
         Timer { name }
     }
@@ -42,12 +35,11 @@ impl<'a> Timer<'a> {
 
 impl<'a> Drop for Timer<'a> {
     fn drop(&mut self) {
-        #[cfg(target_arch = "wasm32")]
         console::time_end_with_label(self.name);
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[wasm_bindgen]
 pub struct Universe {
     width: usize,
     height: usize,
@@ -178,11 +170,10 @@ impl Universe {
 }
 
 // Public methods, exposed to JavaScript via bindgen
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[wasm_bindgen]
 impl Universe {
     pub fn new(width: u32, height: u32) -> Universe {
         // Enable logging for panics
-        #[cfg(target_arch = "wasm32")]
         utils::set_panic_hook();
         let (width, height) = (width as usize, height as usize);
         let size = width * height;
@@ -194,7 +185,6 @@ impl Universe {
 
     pub fn new_rand(width: u32, height: u32) -> Universe {
         // Enable logging for panics
-        #[cfg(target_arch = "wasm32")]
         utils::set_panic_hook();
         let (width, height) = (width as usize, height as usize);
         let size = width * height;
@@ -202,9 +192,8 @@ impl Universe {
         let next = FixedBitSet::with_capacity(size);
         let active_cell_buffers = [Vec::new(), Vec::new()];
 
-        let mut rng = rand::thread_rng();
         for i in 0..size{
-            let state = rng.gen_bool(0.5);
+            let state = js_sys::Math::random() < 0.5;
             current.set(i, state);
         }
         
@@ -369,7 +358,7 @@ impl fmt::Display for Universe {
 }
 
 // Patterns to create
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[wasm_bindgen]
 impl Pattern {
     fn new_plain(width: usize, height: usize) -> Pattern {
         let size = (width * height) as usize;
