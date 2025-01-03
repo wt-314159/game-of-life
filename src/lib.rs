@@ -142,10 +142,10 @@ impl Universe {
             let len = (*current).len();
 
             for idx in 0..len {
-                let cell = (*current)[idx];
+                let cell = (*current).contains_unchecked(idx);
                     let live_neighbours = self.index_neighbour_count(idx);
 
-                    (*next).set(idx, match(cell, live_neighbours) {
+                    (*next).set_unchecked(idx, match(cell, live_neighbours) {
                         //Live cells with less than 2 neighbours die, underpopulation
                         (true, x) if x < 2 => false,
                         // Live cells with more than 3 neighbours die, overpopulation
