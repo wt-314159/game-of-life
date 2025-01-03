@@ -36,11 +36,15 @@ const foreCanvas = document.getElementById("foreground-layer");
 const foreCtx = foreCanvas.getContext("2d");
 let animationId = null;
 
+
 //                  FPS Class
 // ================================================
 const fps = new class {
     constructor() {
         this.fps = document.getElementById("fps");
+        this.sum = 0;
+        this.min = Infinity;
+        this.max = -Infinity;
         this.frames=[];
         this.lastFrameTimeStamp = performance.now();
     }
@@ -52,30 +56,48 @@ const fps = new class {
         this.lastFrameTimeStamp = now;
         const fps = 1 / delta * 1000;
 
-        // Save only the 100 latest timings
         this.frames.push(fps);
+        this.sum += fps
+        this.min = Math.min(this.min, fps);
+        this.max = Math.max(this.max, fps);
+
+        // Save only the 100 latest timings
         if (this.frames.length > 100) {
-            this.frames.shift();
+            let removed = this.frames.shift();
+            this.sum -= removed;
+
+            if (removed == this.min) {
+                this.min = this.findMin();
+            } if (removed == this.max) {
+                this.max = this.findMax();
+            }
         }
 
-        // Find max, min, and mean of 100 latest timings
-        let min = Infinity;
-        let max = -Infinity;
-        let sum = 0;
-        for (let i = 0; i < this.frames.length; i++) {
-            sum += this.frames[i];
-            min = Math.min(min, this.frames[i]);
-            max = Math.max(max, this.frames[i]);
-        }
-        let mean = sum / this.frames.length;
+        let mean = this.sum / this.frames.length;
 
         // Render statistics
         this.fps.textContent = `
         FPS:
          latest = ${Math.round(fps)}  
 avg of last 100 = ${Math.round(mean)}  
-min of last 100 = ${Math.round(min)}  
-max of last 100 = ${Math.round(max)}`.trim();
+min of last 100 = ${Math.round(this.min)}  
+max of last 100 = ${Math.round(this.max)}`.trim();
+    }
+
+    findMin() {
+        let min = Infinity;
+        for (let i = 0; i < this.frames.length; i++) {
+            min = Math.min(min, this.frames[i]);
+        }
+        return min;
+    }
+
+    findMax() {
+        let max = -Infinity;
+        for (let i = 0; i < this.frames.length; i++) {
+            max = Math.max(max, this.frames[i]);
+        }
+        return max;
     }
 };
 // ================================================
