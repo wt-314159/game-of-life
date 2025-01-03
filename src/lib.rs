@@ -1,13 +1,11 @@
 mod utils;
 mod timer;
-mod neighbour_iter;
 extern crate js_sys;
 extern crate web_sys;
 
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 
-use neighbour_iter::NeighbourIter;
 #[allow(unused_imports)]
 use timer::Timer;
 #[allow(unused_imports)]
@@ -50,18 +48,6 @@ impl Universe {
         row * width + column
     }
 
-    pub fn alt_get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
-        let row = index / width;
-        let col = index % width;
-
-        let north = if row == 0 { height - 1 } else { row - 1 };
-        let west = if col == 0 { width - 1 } else { col - 1 };
-        let east = if col == width - 1 { 0 } else { col + 1 };
-        let south = if row == height - 1 { 0 } else { row + 1 };
-
-        NeighbourIter { width, row, col, north, south, east, west, state: 0 }
-    }
-
     pub fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
         let row = index / width;
         let col = index % width;
@@ -87,13 +73,6 @@ impl Universe {
     pub fn alt_live_neighbour_count(&self, index: usize) -> usize {
         let cells = &self.buffers[self.curr_index];
         Self::get_neighbours(index, self.width, self.height)
-            .filter(|&i| cells[i])
-            .count()
-    }
-
-    pub fn new_alt_live_neighbour_count(&self, index: usize) -> usize {
-        let cells = &self.buffers[self.curr_index];
-        Self::alt_get_neighbours(index, self.width, self.height)
             .filter(|&i| cells[i])
             .count()
     }

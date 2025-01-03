@@ -41,14 +41,6 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
                 || universe.alt_live_neighbour_count(black_box(index))
             )
         );
-
-        group.bench_with_input(
-            BenchmarkId::new("new alt", index), 
-            index, 
-            |b, &index| b.iter(
-                || universe.new_alt_live_neighbour_count(black_box(index))
-            )
-        );
     }
     group.finish();
 }
@@ -57,25 +49,15 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
 fn bench_get_neighbours(c: &mut Criterion) {
     let (width, height) = (200, 200);
 
-    let mut group = c.benchmark_group("Get Neighbours");
-
     for index in [0, 1, width + 1].iter() {
 
-        group.bench_with_input(
+        c.bench_with_input(
             BenchmarkId::new("old", index), 
             index, 
             |b, &index| b.iter(
                 || game_of_life::Universe::get_neighbours(black_box(index), width, height).max()
             ));
-        
-        group.bench_with_input(
-            BenchmarkId::new("new", index), 
-            index, 
-        |b, &index| b.iter(
-            || game_of_life::Universe::alt_get_neighbours(black_box(index), width, height).max()
-        ));
     }
-    group.finish();
 }
 
 criterion_group!(benches, bench_get_neighbours);
