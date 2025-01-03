@@ -59,5 +59,31 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
     group.finish();
 }
 
+#[allow(dead_code)]
+fn bench_get_neighbours(c: &mut Criterion) {
+    let (width, height) = (200, 200);
+    let universe = game_of_life::Universe::new(width, height);
+    let (width, height) = (width as usize, height as usize);
+    let cells = universe.get_cells();
+
+    let mut group = c.benchmark_group("Get Neighbours");
+
+    for index in [0, 1, width + 1].iter() {
+        group.bench_with_input(
+            BenchmarkId::new("old", index),
+            index,
+            |b, &index| b.iter(
+                || game_of_life::Universe::get_neighbours(index, width, height)
+            ));
+        
+        group.bench_with_input(
+            BenchmarkId::new("new", index), 
+            index, 
+            |b, &index| b.iter(
+                || game_of_life::Universe::get_neighbours_new(index, width, height)
+            ));
+    }
+}
+
 criterion_group!(benches, live_neighbours_benchmark);
 criterion_main!(benches);
