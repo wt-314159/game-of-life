@@ -247,29 +247,10 @@ impl Universe {
 
         let mut count = 0;
 
-        let north = if row == 0 {
-            height - 1
-        } else {
-            row - 1
-        };
-
-        let west = if col == 0 {
-            width - 1
-        } else {
-            col - 1
-        };
-
-        let east = if col == width - 1 {
-            0
-        } else {
-            col + 1
-        };
-
-        let south = if row == height - 1 {
-            0
-        } else {
-            row + 1
-        };
+        let north = if row == 0 { height - 1 } else { row - 1 };
+        let west = if col == 0 { width - 1 } else { col - 1 };
+        let east = if col == width - 1 { 0 } else { col + 1 };
+        let south = if row == height - 1 { 0 } else { row + 1 };
 
         unsafe {
             count += cells.contains_unchecked(Self::get_index(width, north, west)) as u8;
