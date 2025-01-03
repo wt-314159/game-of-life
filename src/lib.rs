@@ -135,12 +135,12 @@ impl Universe {
     }
 
     pub fn tick(&mut self) {
-        let next_index = Self::other_index(self.curr_index);
+        let next_index = 1 - self.curr_index;
         unsafe {
             let current = self.buffers.as_ptr().add(self.curr_index) as *const FixedBitSet;
             let next = self.buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
-            let len = self.buffers[0].len();
-            
+            let len = (*current).len();
+
             for idx in 0..len {
                 let cell = (*current)[idx];
                     let live_neighbours = self.index_neighbour_count(idx);
