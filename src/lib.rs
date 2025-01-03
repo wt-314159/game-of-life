@@ -41,6 +41,7 @@ pub struct Universe {
     width: usize,
     height: usize,
     buffers: [FixedBitSet; 2],
+    #[allow(dead_code)]
     active_cell_buffers: [Vec<usize>; 2],
     curr_index: usize
 }
@@ -91,66 +92,6 @@ impl Universe {
             .flat_map(move |dr| [dw, 0, de].into_iter().map(move |dc| dr + dc).collect::<Vec<isize>>())
             .filter(|&di| di != 0)
             .map(move |di: isize| ((index as isize) + di) as usize)
-    }
-
-    fn alt_live_neighbour_count(&self, index: usize) -> usize {
-        Self::get_neighbours(index, self.width, self.height)
-            .filter(|&neighbour| self.buffers[self.curr_index][neighbour])
-            .count()
-    }
-
-    fn live_neighbour_count(width: usize, height: usize, cells: &FixedBitSet, row: usize, column: usize) -> u8 {
-        let mut count = 0;
-
-        let north = if row == 0 {
-            height - 1
-        } else {
-            row - 1
-        };
-
-        let west = if column == 0 {
-            width - 1
-        } else {
-            column - 1
-        };
-
-        let east = if column == width - 1 {
-            0
-        } else {
-            column + 1
-        };
-
-        let south = if row == height - 1 {
-            0
-        } else {
-            row + 1
-        };
-
-        let nw = Self::get_index(width, north, west);
-        count += cells[nw] as u8;
-
-        let n = Self::get_index(width, north, column);
-        count += cells[n] as u8;
-
-        let ne = Self::get_index(width, north, east);
-        count += cells[ne] as u8;
-
-        let w = Self::get_index(width, row, west);
-        count += cells[w] as u8;
-
-        let e = Self::get_index(width, row, east);
-        count += cells[e] as u8;
-
-        let sw = Self::get_index(width, south, west);
-        count += cells[sw] as u8;
-
-        let s = Self::get_index(width, south, column);
-        count += cells[s] as u8;
-
-        let se = Self::get_index(width, south, east);
-        count += cells[se] as u8;
-        
-        count
     }
 
     fn angle_width(&self, angle: u32) -> usize {
@@ -314,6 +255,66 @@ impl Universe {
             let idx = Self::get_index(self.width, row, col);
             self.buffers[self.curr_index].set(idx, true);
         }
+    }
+
+    pub fn alt_live_neighbour_count(&self, index: usize) -> usize {
+        Self::get_neighbours(index, self.width, self.height)
+            .filter(|&neighbour| self.buffers[self.curr_index][neighbour])
+            .count()
+    }
+
+    pub fn live_neighbour_count(width: usize, height: usize, cells: &FixedBitSet, row: usize, column: usize) -> u8 {
+        let mut count = 0;
+
+        let north = if row == 0 {
+            height - 1
+        } else {
+            row - 1
+        };
+
+        let west = if column == 0 {
+            width - 1
+        } else {
+            column - 1
+        };
+
+        let east = if column == width - 1 {
+            0
+        } else {
+            column + 1
+        };
+
+        let south = if row == height - 1 {
+            0
+        } else {
+            row + 1
+        };
+
+        let nw = Self::get_index(width, north, west);
+        count += cells[nw] as u8;
+
+        let n = Self::get_index(width, north, column);
+        count += cells[n] as u8;
+
+        let ne = Self::get_index(width, north, east);
+        count += cells[ne] as u8;
+
+        let w = Self::get_index(width, row, west);
+        count += cells[w] as u8;
+
+        let e = Self::get_index(width, row, east);
+        count += cells[e] as u8;
+
+        let sw = Self::get_index(width, south, west);
+        count += cells[sw] as u8;
+
+        let s = Self::get_index(width, south, column);
+        count += cells[s] as u8;
+
+        let se = Self::get_index(width, south, east);
+        count += cells[se] as u8;
+        
+        count
     }
 }
 
