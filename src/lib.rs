@@ -271,14 +271,16 @@ impl Universe {
             row + 1
         };
 
-        count += cells[Self::get_index(width, north, west)] as u8;
-        count += cells[Self::get_index(width, north, col)] as u8;
-        count += cells[Self::get_index(width, north, east)] as u8;
-        count += cells[Self::get_index(width, row, west)] as u8;
-        count += cells[Self::get_index(width, row, east)] as u8;
-        count += cells[Self::get_index(width, south, west)] as u8;
-        count += cells[Self::get_index(width, south, col)] as u8;
-        count += cells[Self::get_index(width, south, east)] as u8;
+        unsafe {
+            count += cells.contains_unchecked(Self::get_index(width, north, west)) as u8;
+            count += cells.contains_unchecked(Self::get_index(width, north, col)) as u8;
+            count += cells.contains_unchecked(Self::get_index(width, north, east)) as u8;
+            count += cells.contains_unchecked(Self::get_index(width, row, west)) as u8;
+            count += cells.contains_unchecked(Self::get_index(width, row, east)) as u8;
+            count += cells.contains_unchecked(Self::get_index(width, south, west)) as u8;
+            count += cells.contains_unchecked(Self::get_index(width, south, col)) as u8;
+            count += cells.contains_unchecked(Self::get_index(width, south, east)) as u8;
+        }
         count
     }
 }
