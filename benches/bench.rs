@@ -60,5 +60,5 @@ fn bench_get_neighbours(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, bench_get_neighbours);
+criterion_group!(benches, live_neighbours_benchmark);
 criterion_main!(benches);

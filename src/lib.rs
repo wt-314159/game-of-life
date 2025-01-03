@@ -73,7 +73,7 @@ impl Universe {
     pub fn alt_live_neighbour_count(&self, index: usize) -> usize {
         let cells = &self.buffers[self.curr_index];
         Self::get_neighbours(index, self.width, self.height)
-            .filter(|&i| cells[i])
+            .filter(|&i| unsafe { cells.contains_unchecked(i) })
             .count()
     }
 
