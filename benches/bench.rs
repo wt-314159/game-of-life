@@ -1,6 +1,6 @@
 #[allow(unused_imports)]
 use std::hint::black_box;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 extern crate game_of_life;
 
@@ -20,18 +20,39 @@ fn tick_benchmark(c: &mut Criterion) {
 fn live_neighbours_benchmark(c: &mut Criterion) {
     let (width, height) = (200, 200);
     let universe = game_of_life::Universe::new(width, height);
-    let cells = universe.get_cells();
+    #[allow(unused_variables)]
+    let (width, height) = (width as usize, height as usize);
 
-    c.bench_function(
-        "live_neighbours",
-        |b| b.iter(|| {
-            game_of_life::Universe::live_neighbour_count(width, height, cells, black_box(0), black_box(0));
-            game_of_life::Universe::live_neighbour_count(width, height, cells, black_box(0), black_box(2));
-            game_of_life::Universe::live_neighbour_count(width, height, cells, black_box(2), black_box(0));
-            game_of_life::Universe::live_neighbour_count(width, height, cells, black_box(height - 1), black_box(width - 1));
-        })
-    );
+    let mut group = c.benchmark_group("Live Neighbours");
+
+    for index in [0, 1, width].iter() {
+        group.bench_with_input(
+            BenchmarkId::new("old", index),
+            index,
+            |b, &index| b.iter(
+                || universe.index_neighbour_count(black_box(index))
+            )
+        );
+
+        
+    }
+    group.finish();
 }
 
-criterion_group!(benches, live_neighbours_benchmark);
+#[allow(dead_code)]
+fn bench_get_neighbours(c: &mut Criterion) {
+    let (width, height) = (200, 200);
+
+    for index in [0, 1, width + 1].iter() {
+
+        c.bench_with_input(
+            BenchmarkId::new("Get Neighbours", index), 
+            index, 
+            |b, &index| b.iter(
+                || game_of_life::Universe::get_neighbours(black_box(index), width, height).max()
+            ));
+    }
+}
+
+criterion_group!(benches, tick_benchmark);
 criterion_main!(benches);

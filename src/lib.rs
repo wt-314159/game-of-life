@@ -1,11 +1,16 @@
 mod utils;
+mod timer;
 extern crate js_sys;
 extern crate web_sys;
 
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 
+#[allow(unused_imports)]
+use timer::Timer;
+#[allow(unused_imports)]
 use web_sys::console;
+#[allow(unused_imports)]
 use wasm_bindgen::prelude::*;
 use std:: {
     cmp::min,
@@ -20,29 +25,12 @@ macro_rules! log {
     }
 }
 
-pub struct Timer<'a> {
-    #[allow(dead_code)]
-    name: &'a str,
-}
-
-impl<'a> Timer<'a> {
-    pub fn new(name: &'a str) -> Timer<'a> {
-        console::time_with_label(name);
-        Timer { name }
-    }
-}
-
-impl<'a> Drop for Timer<'a> {
-    fn drop(&mut self) {
-        console::time_end_with_label(self.name);
-    }
-}
-
 #[wasm_bindgen]
 pub struct Universe {
-    width: u32,
-    height: u32,
+    width: usize,
+    height: usize,
     buffers: [FixedBitSet; 2],
+    #[allow(dead_code)]
     curr_index: usize
 }
 
@@ -54,25 +42,26 @@ pub struct Universe {
 type Pattern = Universe;
 
 impl Universe {
-    fn get_index(width: u32, row: u32, column: u32) -> usize {
-        (row * width + column) as usize
+    #[inline(always)]
+    fn get_index(width: usize, row: usize, column: usize) -> usize {
+        row * width + column
     }
 
-    fn angle_width(&self, angle: u32) -> u32 {
+    fn angle_width(&self, angle: u32) -> usize {
         match angle {
             90 | 270 => self.height,
             _ => self.width
         }
     }
 
-    fn angle_height(&self, angle: u32) -> u32 {
+    fn angle_height(&self, angle: u32) -> usize {
         match angle {
             90 | 270 => self.width,
             _ => self.height
         }
     }
 
-    fn get_angle_index(&self, row: u32, col: u32, angle: u32) -> usize {
+    fn get_angle_index(&self, row: usize, col: usize, angle: u32) -> usize {
         match angle {
             90 => ((self.height - col - 1) * self.width + row) as usize, 
             180 => self.buffers[0].len() - (row * self.width + col + 1) as usize,
@@ -81,12 +70,9 @@ impl Universe {
         }
     }
 
+    #[inline(always)]
     fn other_index(index: usize) -> usize {
-        if index == 0 {
-            1
-        } else {
-            0
-        }
+        if index == 0 { 1 } else { 0 }
     }
 }
 
@@ -96,22 +82,23 @@ impl Universe {
     pub fn new(width: u32, height: u32) -> Universe {
         // Enable logging for panics
         utils::set_panic_hook();
-
-        let size = (width * height) as usize;
+        let (width, height) = (width as usize, height as usize);
+        let size = width * height;
         let current = FixedBitSet::with_capacity(size);
-        let next = FixedBitSet::with_capacity(size);
+        let next = FixedBitSet::with_capacity(size); 
+
         Universe { width, height, buffers: [current, next], curr_index: 0 }
     }
 
     pub fn new_rand(width: u32, height: u32) -> Universe {
         // Enable logging for panics
         utils::set_panic_hook();
-
-        let size = (width * height) as usize;
+        let (width, height) = (width as usize, height as usize);
+        let size = width * height;
         let mut current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
 
-        for i in 0..size {
+        for i in 0..size{
             let state = js_sys::Math::random() < 0.5;
             current.set(i, state);
         }
@@ -120,23 +107,23 @@ impl Universe {
     }
 
     pub fn width(&self) -> u32 {
-        self.width
+        self.width as u32
     }
 
     pub fn set_width(&mut self, width: u32) {
-        self.width = width;
-        let size = (width * self.height) as usize;
+        self.width = width as usize;
+        let size = self.width * self.height;
         self.buffers[0] = FixedBitSet::with_capacity(size);
         self.buffers[1] = FixedBitSet::with_capacity(size);
     } 
 
     pub fn height(&self) -> u32 {
-        self.height
+        self.height as u32
     }
 
     pub fn set_height(&mut self, height: u32) {
-        self.height = height;
-        let size = (self.width * height) as usize;
+        self.height = height as usize;
+        let size = self.width * self.height;
         self.buffers[0] = FixedBitSet::with_capacity(size);
         self.buffers[1] = FixedBitSet::with_capacity(size);
     }
@@ -146,20 +133,17 @@ impl Universe {
     }
 
     pub fn tick(&mut self) {
-        let next_index = Self::other_index(self.curr_index);
-        let width = self.width;
-        let height = self.height;
+        let next_index = 1 - self.curr_index;
         unsafe {
             let current = self.buffers.as_ptr().add(self.curr_index) as *const FixedBitSet;
             let next = self.buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
+            let len = (*current).len();
 
-            for row in 0..self.height {
-                for col in 0..self.width {
-                    let idx = Self::get_index(width, row, col);
-                    let cell = (*current)[idx];
-                    let live_neighbours = Self::live_neighbour_count(width, height, &*current, row, col);
+            for idx in 0..len {
+                let cell = (*current).contains_unchecked(idx);
+                    let live_neighbours = self.index_neighbour_count(idx);
 
-                    (*next).set(idx, match(cell, live_neighbours) {
+                    (*next).set_unchecked(idx, match(cell, live_neighbours) {
                         //Live cells with less than 2 neighbours die, underpopulation
                         (true, x) if x < 2 => false,
                         // Live cells with more than 3 neighbours die, overpopulation
@@ -169,18 +153,18 @@ impl Universe {
                         // All other cells remain in same state
                         (other, _) => other
                     });
-                }
             }
         }
         self.curr_index = next_index;
     }
 
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
-        let idx = Self::get_index(self.width, row, column);
+        let idx = Self::get_index(self.width, row as usize, column as usize);
         self.buffers[self.curr_index].toggle(idx);
     }
 
     pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32, angle: u32) {
+        let (row, column) = (row as usize, column as usize);
         let max_row = min(row + pattern.angle_height(angle), self.height) - row;
         let max_col = min(column + pattern.angle_width(angle), self.width) - column;
 
@@ -211,64 +195,66 @@ impl Universe {
     }
 
     // Set cells to be alive by passing row and col
-    pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
+    pub fn set_cells(&mut self, cells: &[(usize, usize)]) {
         for (row, col) in cells.iter().cloned() {
             let idx = Self::get_index(self.width, row, col);
             self.buffers[self.curr_index].set(idx, true);
         }
     }
 
-    pub fn live_neighbour_count(width: u32, height: u32, cells: &FixedBitSet, row: u32, column: u32) -> u8 {
+    pub fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
+        let row = index / width;
+        let col = index % width;
+
+        let north = if row == 0 { height - 1 } else { row - 1 };
+        let west = if col == 0 { width - 1 } else { col - 1 };
+        let east = if col == width - 1 { 0 } else { col + 1 };
+        let south = if row == height - 1 { 0 } else { row + 1 };
+
+        let north_row_idx = width * north;
+        let row_idx = width * row;
+        let south_row_idx = width * south;
+
+        let indices = [
+            north_row_idx + west,
+            north_row_idx + col,
+            north_row_idx + east,
+            row_idx + west,
+            row_idx + east,
+            south_row_idx + west,
+            south_row_idx + col, 
+            south_row_idx + east
+        ];
+        IntoIterator::into_iter(indices)
+    }
+
+    pub fn index_neighbour_count(&self, index: usize) -> u8 {
+        let (width, height) = (self.width, self.height);
+        let cells = &self.buffers[self.curr_index];
+        let row = index / width;
+        let col = index % width;
+
         let mut count = 0;
 
-        let north = if row == 0 {
-            height - 1
-        } else {
-            row - 1
-        };
+        let north = if row == 0 { height - 1 } else { row - 1 };
+        let west = if col == 0 { width - 1 } else { col - 1 };
+        let east = if col == width - 1 { 0 } else { col + 1 };
+        let south = if row == height - 1 { 0 } else { row + 1 };
 
-        let west = if column == 0 {
-            width - 1
-        } else {
-            column - 1
-        };
+        let north_row_idx = north * width;
+        let row_idx = row * width;
+        let south_row_idx = south * width;
 
-        let east = if column == width - 1 {
-            0
-        } else {
-            column + 1
-        };
-
-        let south = if row == height - 1 {
-            0
-        } else {
-            row + 1
-        };
-
-        let nw = Self::get_index(width, north, west);
-        count += cells[nw] as u8;
-
-        let n = Self::get_index(width, north, column);
-        count += cells[n] as u8;
-
-        let ne = Self::get_index(width, north, east);
-        count += cells[ne] as u8;
-
-        let w = Self::get_index(width, row, west);
-        count += cells[w] as u8;
-
-        let e = Self::get_index(width, row, east);
-        count += cells[e] as u8;
-
-        let sw = Self::get_index(width, south, west);
-        count += cells[sw] as u8;
-
-        let s = Self::get_index(width, south, column);
-        count += cells[s] as u8;
-
-        let se = Self::get_index(width, south, east);
-        count += cells[se] as u8;
-        
+        unsafe {
+            count += cells.contains_unchecked(north_row_idx + west) as u8;
+            count += cells.contains_unchecked(north_row_idx + col) as u8;
+            count += cells.contains_unchecked(north_row_idx + east) as u8;
+            count += cells.contains_unchecked(row_idx + west) as u8;
+            count += cells.contains_unchecked(row_idx + east) as u8;
+            count += cells.contains_unchecked(south_row_idx + west) as u8;
+            count += cells.contains_unchecked(south_row_idx + col) as u8;
+            count += cells.contains_unchecked(south_row_idx + east) as u8;
+        }
         count
     }
 }
@@ -290,10 +276,11 @@ impl fmt::Display for Universe {
 // Patterns to create
 #[wasm_bindgen]
 impl Pattern {
-    fn new_plain(width: u32, height: u32) -> Pattern {
+    fn new_plain(width: usize, height: usize) -> Pattern {
         let size = (width * height) as usize;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(0);
+        
         Pattern { width, height, buffers: [current, next], curr_index: 0 }
     }
 
@@ -520,5 +507,17 @@ mod tests {
 
         let row_2_col_1 = universe.get_angle_index(2, 1, 270);
         assert_eq!(row_2_col_1, 7);
+    }
+
+    #[test]
+    fn test_get_neighbour() {
+        let indices: Vec<usize> = Universe::get_neighbours(0, 4, 3).collect();
+        
+        let expected_indices = [11, 8, 9, 3, 1, 7, 4, 5];
+
+        assert_eq!(indices.len(), expected_indices.len());
+        for i in 0..expected_indices.len() {
+            assert_eq!(expected_indices[i], indices[i]);
+        }
     }
 }
