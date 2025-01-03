@@ -51,6 +51,7 @@ pub struct Universe {
     width: usize,
     height: usize,
     buffers: [FixedBitSet; 2],
+    #[allow(dead_code)]
     active_cell_buffers: [Vec<usize>; 2],
     curr_index: usize
 }
@@ -101,12 +102,6 @@ impl Universe {
             .flat_map(move |dr| [dw, 0, de].into_iter().map(move |dc| dr + dc).collect::<Vec<isize>>())
             .filter(|&di| di != 0)
             .map(move |di: isize| ((index as isize) + di) as usize)
-    }
-
-    fn alt_live_neighbour_count(&self, index: usize) -> usize {
-        Self::get_neighbours(index, self.width, self.height)
-            .filter(|&neighbour| self.buffers[self.curr_index][neighbour])
-            .count()
     }
 
     fn angle_width(&self, angle: u32) -> usize {
@@ -274,7 +269,13 @@ impl Universe {
         }
     }
 
-    fn live_neighbour_count(width: usize, height: usize, cells: &FixedBitSet, row: usize, column: usize) -> u8 {
+    pub fn alt_live_neighbour_count(&self, index: usize) -> usize {
+        Self::get_neighbours(index, self.width, self.height)
+            .filter(|&neighbour| self.buffers[self.curr_index][neighbour])
+            .count()
+    }
+
+    pub fn live_neighbour_count(width: usize, height: usize, cells: &FixedBitSet, row: usize, column: usize) -> u8 {
         let mut count = 0;
 
         let north = if row == 0 {
