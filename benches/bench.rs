@@ -47,6 +47,14 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
                 || universe.alt_live_neighbour_count(index)
             )
         );
+
+        group.bench_with_input(
+            BenchmarkId::new("new index", index),
+            index,
+            |b, &index| b.iter(
+                || universe.index_neighbour_count(index)
+            )
+        );
     }
     group.finish();
 }
