@@ -28,43 +28,21 @@ fn tick_benchmark(c: &mut Criterion) {
 fn live_neighbours_benchmark(c: &mut Criterion) {
     let (width, height) = (200, 200);
     let universe = game_of_life::Universe::new(width, height);
+    #[allow(unused_variables)]
     let (width, height) = (width as usize, height as usize);
-    let cells = universe.get_cells();
 
-    let mut group = c.benchmark_group("Live Neighbours");
-
-    for (index, row, col) in [(0, 0, 0), (1, 0, 1), (width + 1, 1, 1)].iter() {
-        group.bench_with_input(
-            BenchmarkId::new("old", index), 
-            &(row, col),
-            |b, (&row, &col)| b.iter(
-                || game_of_life::Universe::live_neighbour_count(width, height, cells, row, col)));
-        
-        group.bench_with_input(
-            BenchmarkId::new("new", index),
-            index,
-            |b, &index| b.iter(
-                || universe.alt_live_neighbour_count(index)
-            )
-        );
-
-        group.bench_with_input(
-            BenchmarkId::new("new index", index),
-            index,
-            |b, &index| b.iter(
-                || universe.index_neighbour_count(index)
-            )
-        );
-    }
-    group.finish();
+    c.bench_function(
+        "live neighbours", 
+        |b| b.iter(|| {
+            universe.index_neighbour_count(black_box(0));
+            universe.index_neighbour_count(black_box(1));
+            universe.index_neighbour_count(black_box(width));
+        }));
 }
 
 #[allow(dead_code)]
 fn bench_get_neighbours(c: &mut Criterion) {
     let (width, height) = (200, 200);
-    let universe = game_of_life::Universe::new(width, height);
-    let (width, height) = (width as usize, height as usize);
-    let cells = universe.get_cells();
 
     let mut group = c.benchmark_group("Get Neighbours");
 
