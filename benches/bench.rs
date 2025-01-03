@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 #[allow(unused_imports)]
 use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -31,13 +32,26 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
     #[allow(unused_variables)]
     let (width, height) = (width as usize, height as usize);
 
-    c.bench_function(
-        "live neighbours", 
-        |b| b.iter(|| {
-            universe.index_neighbour_count(black_box(0));
-            universe.index_neighbour_count(black_box(1));
-            universe.index_neighbour_count(black_box(width));
-        }));
+    let mut group = c.benchmark_group("Live Neighbours");
+
+    for index in [0, 1, width].iter() {
+        group.bench_with_input(
+            BenchmarkId::new("old", index),
+            index,
+            |b, &index| b.iter(
+                || universe.index_neighbour_count(black_box(index))
+            )
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("new", index), 
+            index, 
+            |b, &index| b.iter(
+                || universe.alt_live_neighbour_count(black_box(index))
+            )
+        );
+    }
+    group.finish();
 }
 
 #[allow(dead_code)]
@@ -47,21 +61,23 @@ fn bench_get_neighbours(c: &mut Criterion) {
     let mut group = c.benchmark_group("Get Neighbours");
 
     for index in [0, 1, width + 1].iter() {
+
         group.bench_with_input(
-            BenchmarkId::new("old", index),
-            index,
+            BenchmarkId::new("old", index), 
+            index, 
             |b, &index| b.iter(
-                || game_of_life::Universe::get_neighbours(index, width, height)
+                || game_of_life::Universe::get_neighbours(black_box(index), width, height)
             ));
         
         group.bench_with_input(
             BenchmarkId::new("new", index), 
             index, 
-            |b, &index| b.iter(
-                || game_of_life::Universe::get_neighbours_new(index, width, height)
-            ));
+        |b, &index| b.iter(
+            || game_of_life::Universe::alt_get_neighbours(black_box(index), width, height)
+        ));
     }
+    group.finish();
 }
 
-criterion_group!(benches, bench_get_neighbours);
+criterion_group!(benches, live_neighbours_benchmark);
 criterion_main!(benches);

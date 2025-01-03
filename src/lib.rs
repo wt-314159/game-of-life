@@ -39,6 +39,38 @@ impl<'a> Drop for Timer<'a> {
     }
 }
 
+struct NeighbourIter {
+    index: usize,
+    width: usize,
+    row: usize,
+    col: usize,
+    north: usize,
+    south: usize,
+    east: usize,
+    west: usize,
+    state: u8
+}
+
+impl Iterator for NeighbourIter {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = match self.state {
+            0 => Some(Universe::get_index(self.width, self.north, self.west)),
+            1 => Some(Universe::get_index(self.width, self.north, self.col)),
+            2 => Some(Universe::get_index(self.width, self.north, self.east)),
+            3 => Some(Universe::get_index(self.width, self.row, self.west)),
+            4 => Some(Universe::get_index(self.width, self.row, self.east)),
+            5 => Some(Universe::get_index(self.width, self.south, self.west)),
+            6 => Some(Universe::get_index(self.width, self.south, self.col)),
+            7 => Some(Universe::get_index(self.width, self.south, self.east)),
+            _ => None,
+        };
+        self.state += 1;
+        result
+    }
+}
+
 #[wasm_bindgen]
 pub struct Universe {
     width: usize,
@@ -57,11 +89,24 @@ pub struct Universe {
 type Pattern = Universe;
 
 impl Universe {
+    #[inline(always)]
     fn get_index(width: usize, row: usize, column: usize) -> usize {
         row * width + column
     }
 
-    pub fn get_neighbours_new(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
+    pub fn alt_get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
+        let row = index / width;
+        let col = index % width;
+
+        let north = if row == 0 { height - 1 } else { row - 1 };
+        let west = if col == 0 { width - 1 } else { col - 1 };
+        let east = if col == width - 1 { 0 } else { col + 1 };
+        let south = if row == height - 1 { 0 } else { row + 1 };
+
+        NeighbourIter { index, width, row, col, north, south, east, west, state: 0 }
+    }
+
+    pub fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
         let row = index / width;
         let col = index % width;
 
@@ -101,40 +146,11 @@ impl Universe {
         IntoIterator::into_iter(indices)
     }
 
-    pub fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
-        let i_width = width as isize;
-        let i_height = height as isize;
-        let col = index % width;
-
-        let dn = if index < width - 1 {
-            i_width * (i_height - 1)
-        } else {
-            -i_width
-        };
-
-        let ds = if index > (width - 1) * height {
-            -(i_width * (i_height - 1))
-        } else {
-            i_width
-        };
-
-        let dw = if col == 0 {
-            i_width - 1
-        } else {
-            -1
-        };
-
-        let de = if col == width - 1 {
-            -(i_width - 1)
-        } else {
-            1
-        };
-
-        let drs = vec![dn, 0, ds];
-        drs.into_iter()
-            .flat_map(move |dr| [dw, 0, de].iter().map(move |dc| dr + dc).collect::<Vec<isize>>())
-            .filter(|&di| di != 0)
-            .map(move |di: isize| ((index as isize) + di) as usize)
+    pub fn alt_live_neighbour_count(&self, index: usize) -> usize {
+        let cells = &self.buffers[self.curr_index];
+        Self::get_neighbours(index, self.width, self.height)
+            .filter(|&i| cells[i])
+            .count()
     }
 
     fn angle_width(&self, angle: u32) -> usize {
