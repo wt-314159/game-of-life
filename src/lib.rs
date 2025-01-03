@@ -71,12 +71,9 @@ impl Universe {
         }
     }
 
+    #[inline(always)]
     fn other_index(index: usize) -> usize {
-        if index == 0 {
-            1
-        } else {
-            0
-        }
+        if index == 0 { 1 } else { 0 }
     }
 }
 
@@ -139,15 +136,13 @@ impl Universe {
 
     pub fn tick(&mut self) {
         let next_index = Self::other_index(self.curr_index);
-        let width = self.width;
         unsafe {
             let current = self.buffers.as_ptr().add(self.curr_index) as *const FixedBitSet;
             let next = self.buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
-
-            for row in 0..self.height {
-                for col in 0..self.width {
-                    let idx = Self::get_index(width, row, col);
-                    let cell = (*current)[idx];
+            let len = self.buffers[0].len();
+            
+            for idx in 0..len {
+                let cell = (*current)[idx];
                     let live_neighbours = self.index_neighbour_count(idx);
 
                     (*next).set(idx, match(cell, live_neighbours) {
@@ -160,7 +155,6 @@ impl Universe {
                         // All other cells remain in same state
                         (other, _) => other
                     });
-                }
             }
         }
         self.curr_index = next_index;
