@@ -68,7 +68,47 @@ impl Universe {
         row * width + column
     }
 
-    fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
+    pub fn get_neighbours_new(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
+        let row = index / width;
+        let col = index % width;
+
+        let north = if row == 0 {
+            height - 1
+        } else {
+            row - 1
+        };
+
+        let west = if col == 0 {
+            width - 1
+        } else {
+            col - 1
+        };
+
+        let east = if col == width - 1 {
+            0
+        } else {
+            col + 1
+        };
+
+        let south = if row == height - 1 {
+            0
+        } else {
+            row + 1
+        };
+
+
+        let indices = [Self::get_index(width, north, west),
+        Self::get_index(width, north, col),
+        Self::get_index(width, north, east),
+        Self::get_index(width, row, west),
+        Self::get_index(width, row, east),
+        Self::get_index(width, south, west),
+        Self::get_index(width, south, col),
+        Self::get_index(width, south, east)];
+        IntoIterator::into_iter(indices)
+    }
+
+    pub fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
         let i_width = width as isize;
         let i_height = height as isize;
         let col = index % width;
@@ -269,12 +309,6 @@ impl Universe {
         }
     }
 
-    pub fn alt_live_neighbour_count(&self, index: usize) -> usize {
-        Self::get_neighbours(index, self.width, self.height)
-            .filter(|&neighbour| self.buffers[self.curr_index][neighbour])
-            .count()
-    }
-
     pub fn index_neighbour_count(&self, index: usize) -> u8 {
         let (width, height) = (self.width, self.height);
         let cells = &self.buffers[self.curr_index];
@@ -315,60 +349,6 @@ impl Universe {
         count += cells[Self::get_index(width, south, west)] as u8;
         count += cells[Self::get_index(width, south, col)] as u8;
         count += cells[Self::get_index(width, south, east)] as u8;
-        count
-    }
-
-    pub fn live_neighbour_count(width: usize, height: usize, cells: &FixedBitSet, row: usize, column: usize) -> u8 {
-        let mut count = 0;
-
-        let north = if row == 0 {
-            height - 1
-        } else {
-            row - 1
-        };
-
-        let west = if column == 0 {
-            width - 1
-        } else {
-            column - 1
-        };
-
-        let east = if column == width - 1 {
-            0
-        } else {
-            column + 1
-        };
-
-        let south = if row == height - 1 {
-            0
-        } else {
-            row + 1
-        };
-
-        let nw = Self::get_index(width, north, west);
-        count += cells[nw] as u8;
-
-        let n = Self::get_index(width, north, column);
-        count += cells[n] as u8;
-
-        let ne = Self::get_index(width, north, east);
-        count += cells[ne] as u8;
-
-        let w = Self::get_index(width, row, west);
-        count += cells[w] as u8;
-
-        let e = Self::get_index(width, row, east);
-        count += cells[e] as u8;
-
-        let sw = Self::get_index(width, south, west);
-        count += cells[sw] as u8;
-
-        let s = Self::get_index(width, south, column);
-        count += cells[s] as u8;
-
-        let se = Self::get_index(width, south, east);
-        count += cells[se] as u8;
-        
         count
     }
 }
