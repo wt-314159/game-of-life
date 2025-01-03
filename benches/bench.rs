@@ -65,14 +65,14 @@ fn bench_get_neighbours(c: &mut Criterion) {
             BenchmarkId::new("old", index), 
             index, 
             |b, &index| b.iter(
-                || game_of_life::Universe::get_neighbours(black_box(index), width, height).sum::<usize>()
+                || game_of_life::Universe::get_neighbours(black_box(index), width, height).max()
             ));
         
         group.bench_with_input(
             BenchmarkId::new("new", index), 
             index, 
         |b, &index| b.iter(
-            || game_of_life::Universe::alt_get_neighbours(black_box(index), width, height).sum::<usize>()
+            || game_of_life::Universe::alt_get_neighbours(black_box(index), width, height).max()
         ));
     }
     group.finish();
