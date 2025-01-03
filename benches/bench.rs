@@ -1,4 +1,3 @@
-use std::f32::consts::PI;
 #[allow(unused_imports)]
 use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -66,18 +65,18 @@ fn bench_get_neighbours(c: &mut Criterion) {
             BenchmarkId::new("old", index), 
             index, 
             |b, &index| b.iter(
-                || game_of_life::Universe::get_neighbours(black_box(index), width, height)
+                || game_of_life::Universe::get_neighbours(black_box(index), width, height).sum::<usize>()
             ));
         
         group.bench_with_input(
             BenchmarkId::new("new", index), 
             index, 
         |b, &index| b.iter(
-            || game_of_life::Universe::alt_get_neighbours(black_box(index), width, height)
+            || game_of_life::Universe::alt_get_neighbours(black_box(index), width, height).sum::<usize>()
         ));
     }
     group.finish();
 }
 
-criterion_group!(benches, live_neighbours_benchmark);
+criterion_group!(benches, bench_get_neighbours);
 criterion_main!(benches);

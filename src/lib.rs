@@ -71,14 +71,16 @@ impl Universe {
         let east = if col == width - 1 { 0 } else { col + 1 };
         let south = if row == height - 1 { 0 } else { row + 1 };
 
-        let indices = [Self::get_index(width, north, west),
-        Self::get_index(width, north, col),
-        Self::get_index(width, north, east),
-        Self::get_index(width, row, west),
-        Self::get_index(width, row, east),
-        Self::get_index(width, south, west),
-        Self::get_index(width, south, col),
-        Self::get_index(width, south, east)];
+        let indices = [
+            Self::get_index(width, north, west),
+            Self::get_index(width, north, col),
+            Self::get_index(width, north, east),
+            Self::get_index(width, row, west),
+            Self::get_index(width, row, east),
+            Self::get_index(width, south, west),
+            Self::get_index(width, south, col),
+            Self::get_index(width, south, east)
+        ];
         IntoIterator::into_iter(indices)
     }
 
