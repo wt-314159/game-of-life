@@ -89,6 +89,13 @@ impl Universe {
             .count()
     }
 
+    pub fn new_alt_live_neighbour_count(&self, index: usize) -> usize {
+        let cells = &self.buffers[self.curr_index];
+        Self::alt_get_neighbours(index, self.width, self.height)
+            .filter(|&i| cells[i])
+            .count()
+    }
+
     fn angle_width(&self, angle: u32) -> usize {
         match angle {
             90 | 270 => self.height,
