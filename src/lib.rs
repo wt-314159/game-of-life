@@ -48,35 +48,6 @@ impl Universe {
         row * width + column
     }
 
-    pub fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
-        let row = index / width;
-        let col = index % width;
-
-        let north = if row == 0 { height - 1 } else { row - 1 };
-        let west = if col == 0 { width - 1 } else { col - 1 };
-        let east = if col == width - 1 { 0 } else { col + 1 };
-        let south = if row == height - 1 { 0 } else { row + 1 };
-
-        let indices = [
-            Self::get_index(width, north, west),
-            Self::get_index(width, north, col),
-            Self::get_index(width, north, east),
-            Self::get_index(width, row, west),
-            Self::get_index(width, row, east),
-            Self::get_index(width, south, west),
-            Self::get_index(width, south, col),
-            Self::get_index(width, south, east)
-        ];
-        IntoIterator::into_iter(indices)
-    }
-
-    pub fn alt_live_neighbour_count(&self, index: usize) -> usize {
-        let cells = &self.buffers[self.curr_index];
-        Self::get_neighbours(index, self.width, self.height)
-            .filter(|&i| unsafe { cells.contains_unchecked(i) })
-            .count()
-    }
-
     fn angle_width(&self, angle: u32) -> usize {
         match angle {
             90 | 270 => self.height,
@@ -237,6 +208,28 @@ impl Universe {
             let idx = Self::get_index(self.width, row, col);
             self.buffers[self.curr_index].set(idx, true);
         }
+    }
+
+    pub fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
+        let row = index / width;
+        let col = index % width;
+
+        let north = if row == 0 { height - 1 } else { row - 1 };
+        let west = if col == 0 { width - 1 } else { col - 1 };
+        let east = if col == width - 1 { 0 } else { col + 1 };
+        let south = if row == height - 1 { 0 } else { row + 1 };
+
+        let indices = [
+            Self::get_index(width, north, west),
+            Self::get_index(width, north, col),
+            Self::get_index(width, north, east),
+            Self::get_index(width, row, west),
+            Self::get_index(width, row, east),
+            Self::get_index(width, south, west),
+            Self::get_index(width, south, col),
+            Self::get_index(width, south, east)
+        ];
+        IntoIterator::into_iter(indices)
     }
 
     pub fn index_neighbour_count(&self, index: usize) -> u8 {

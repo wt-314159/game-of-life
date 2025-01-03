@@ -23,26 +23,16 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
     #[allow(unused_variables)]
     let (width, height) = (width as usize, height as usize);
 
-    let mut group = c.benchmark_group("Live Neighbours");
 
     for index in [0, 1, width].iter() {
-        group.bench_with_input(
-            BenchmarkId::new("old", index),
+        c.bench_with_input(
+            BenchmarkId::new("Live Neighbours", index),
             index,
             |b, &index| b.iter(
                 || universe.index_neighbour_count(black_box(index))
             )
         );
-
-        group.bench_with_input(
-            BenchmarkId::new("new", index), 
-            index, 
-            |b, &index| b.iter(
-                || universe.alt_live_neighbour_count(black_box(index))
-            )
-        );
     }
-    group.finish();
 }
 
 #[allow(dead_code)]
