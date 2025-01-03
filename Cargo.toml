@@ -5,15 +5,14 @@ authors = ["William Train <William.Train@ametek.com>"]
 edition = "2018"
 
 [lib]
-crate-type = ["rlib"]
+crate-type = ["cdylib", "rlib"]
 bench = false
 
 [features]
 default = ["console_error_panic_hook"]
-benchmarking = []
 
 [dependencies]
-# wasm-bindgen = "0.2.84"
+wasm-bindgen = "0.2.84"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -24,7 +23,14 @@ fixedbitset = "0.5.7"
 js-sys = "0.3.76"
 rand = "0.8.5"
 
+[dependencies.web-sys]
+version = "0.3.76"
+features = [
+    "console",
+]
+
 [dev-dependencies]
+wasm-bindgen-test = "0.3.34"
 criterion = { version = "0.5.1", features = ["html_reports"] }
 
 [[bench]]

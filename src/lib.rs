@@ -12,8 +12,8 @@ use fixedbitset::FixedBitSet;
 use rand::Rng;
 #[cfg(target_arch = "wasm32")]
 use web_sys::console;
-
-
+#[allow(unused_imports)]
+use wasm_bindgen::prelude::*;
 use std:: {
     cmp::min,
     fmt,
@@ -47,6 +47,7 @@ impl<'a> Drop for Timer<'a> {
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub struct Universe {
     width: usize,
     height: usize,
@@ -139,7 +140,7 @@ impl Universe {
 
         let drs = vec![dn, 0, ds];
         drs.into_iter()
-            .flat_map(move |dr| [dw, 0, de].into_iter().map(move |dc| dr + dc).collect::<Vec<isize>>())
+            .flat_map(move |dr| [dw, 0, de].iter().map(move |dc| dr + dc).collect::<Vec<isize>>())
             .filter(|&di| di != 0)
             .map(move |di: isize| ((index as isize) + di) as usize)
     }
@@ -177,6 +178,7 @@ impl Universe {
 }
 
 // Public methods, exposed to JavaScript via bindgen
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Universe {
     pub fn new(width: u32, height: u32) -> Universe {
         // Enable logging for panics
@@ -238,7 +240,6 @@ impl Universe {
     pub fn tick(&mut self) {
         let next_index = Self::other_index(self.curr_index);
         let width = self.width;
-        let height = self.height;
         unsafe {
             let current = self.buffers.as_ptr().add(self.curr_index) as *const FixedBitSet;
             let next = self.buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
@@ -368,6 +369,7 @@ impl fmt::Display for Universe {
 }
 
 // Patterns to create
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 impl Pattern {
     fn new_plain(width: usize, height: usize) -> Pattern {
         let size = (width * height) as usize;
