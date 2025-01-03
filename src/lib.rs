@@ -247,7 +247,7 @@ impl Universe {
                 for col in 0..self.width {
                     let idx = Self::get_index(width, row, col);
                     let cell = (*current)[idx];
-                    let live_neighbours = Self::live_neighbour_count(width, height, &*current, row, col);
+                    let live_neighbours = self.index_neighbour_count(idx);
 
                     (*next).set(idx, match(cell, live_neighbours) {
                         //Live cells with less than 2 neighbours die, underpopulation
