@@ -114,6 +114,23 @@ impl Universe {
         Universe { width, height, buffers: [current, next], active_cell_buffers: [curr_active, next_active], curr_index: 0 }
     }
 
+    
+    pub fn new_sparse(width: u32, height: u32) -> Universe {
+        // Enable logging for panics
+        utils::set_panic_hook();
+        let (width, height) = (width as usize, height as usize);
+        let size = width * height;
+        let mut current = FixedBitSet::with_capacity(size);
+        let next = FixedBitSet::with_capacity(size);
+
+        for i in 0..size {
+            let state = i % 37 == 0;
+            current.set(i, state);
+        }
+
+        Universe { width, height, buffers: [current, next], curr_index: 0 }
+    }
+
     pub fn width(&self) -> u32 {
         self.width as u32
     }
