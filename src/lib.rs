@@ -197,9 +197,16 @@ impl Universe {
         self.curr_index = next_index;
     }
 
+    pub fn toggle_cell_not_active(&mut self, row: u32, column: u32) {
+        let idx = Self::get_index(self.width, row as usize, column as usize);
+        self.buffers[self.curr_index].toggle(idx);
+    }
+
     pub fn toggle_cell(&mut self, row: u32, column: u32) {
         let idx = Self::get_index(self.width, row as usize, column as usize);
         self.buffers[self.curr_index].toggle(idx);
+        self.active_cell_buffers[self.curr_index].insert(idx);
+        Self::insert_neighbours(&mut self.active_cell_buffers[self.curr_index], idx, self.width, self.height);
     }
 
     pub fn insert_pattern(&mut self, pattern: &Pattern, row: u32, column: u32, angle: u32) {
@@ -215,6 +222,7 @@ impl Universe {
                 let p_idx = pattern.get_angle_index(r, c, angle);
 
                 self.buffers[self.curr_index].set(u_idx, pattern.buffers[pattern.curr_index][p_idx]);
+                self.active_cell_buffers[self.curr_index].insert(u_idx);
             } 
         }
     }
@@ -356,7 +364,7 @@ impl Pattern {
         let mut pattern = Pattern::new_plain(5, 5);
 
         for i in 1..=3 {
-            pattern.toggle_cell(2, i);
+            pattern.toggle_cell_not_active(2, i);
         }
         pattern
     }
@@ -367,7 +375,7 @@ impl Pattern {
         let mut offset = 0;
         for i in 2..=3 {
             for j in 2..=4 {
-                pattern.toggle_cell(i, j - offset);
+                pattern.toggle_cell_not_active(i, j - offset);
             }
             offset = 1;
         }
@@ -381,7 +389,7 @@ impl Pattern {
             let offset = r * 2;
             for i in 1..=2 {
                 for j in 1..=2 {
-                    pattern.toggle_cell(i + offset, j + offset);
+                    pattern.toggle_cell_not_active(i + offset, j + offset);
                 }
             }
         }
