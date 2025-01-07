@@ -158,18 +158,18 @@ impl Universe {
 
             for idx in 0..len {
                 let cell = (*current).contains_unchecked(idx);
-                    let live_neighbours = self.index_neighbour_count(idx);
+                let live_neighbours = self.index_neighbour_count(idx);
 
-                    (*next).set_unchecked(idx, match(cell, live_neighbours) {
-                        //Live cells with less than 2 neighbours die, underpopulation
-                        (true, x) if x < 2 => false,
-                        // Live cells with more than 3 neighbours die, overpopulation
-                        (true, x) if x > 3 => false,
-                        // Dead cells with 3 neighbours become alive, reproduction
-                        (false, 3) => true,
-                        // All other cells remain in same state
-                        (other, _) => other
-                    });
+                (*next).set_unchecked(idx, match(cell, live_neighbours) {
+                    //Live cells with less than 2 neighbours die, underpopulation
+                    (true, x) if x < 2 => false,
+                    // Live cells with more than 3 neighbours die, overpopulation
+                    (true, x) if x > 3 => false,
+                    // Dead cells with 3 neighbours become alive, reproduction
+                    (false, 3) => true,
+                    // All other cells remain in same state
+                    (other, _) => other
+                });
             }
         }
         self.curr_index = next_index;
