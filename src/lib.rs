@@ -6,7 +6,7 @@ extern crate web_sys;
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 
-use ahash::AHashSet;
+use rustc_hash::FxHashSet;
 #[allow(unused_imports)]
 use timer::Timer;
 #[allow(unused_imports)]
@@ -32,7 +32,7 @@ pub struct Universe {
     width: usize,
     height: usize,
     buffers: [FixedBitSet; 2],
-    active_cell_buffers: [AHashSet<usize>; 2],
+    active_cell_buffers: [FxHashSet<usize>; 2],
     curr_index: usize
 }
 
@@ -72,7 +72,7 @@ impl Universe {
         }
     }
 
-    fn insert_neighbours(active_cells: &mut AHashSet<usize>, index: usize, width: usize, height: usize) {
+    fn insert_neighbours(active_cells: &mut FxHashSet<usize>, index: usize, width: usize, height: usize) {
         for i in Self::get_neighbours(index, width, height) {
             active_cells.insert(i);
         }
@@ -89,8 +89,8 @@ impl Universe {
         let size = width * height;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size); 
-        let curr_active = AHashSet::with_capacity(size);
-        let next_active = AHashSet::with_capacity(size);
+        let curr_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
+        let next_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
 
         Universe { width, height, buffers: [current, next], active_cell_buffers: [curr_active, next_active], curr_index: 0 }
     }
@@ -102,8 +102,8 @@ impl Universe {
         let size = width * height;
         let mut current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
-        let mut curr_active =AHashSet::with_capacity(size);
-        let next_active = AHashSet::with_capacity(size);
+        let mut curr_active =FxHashSet::with_capacity_and_hasher(size, Default::default());
+        let next_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
 
         for i in 0..size{
             let state = js_sys::Math::random() < 0.25;
@@ -124,8 +124,8 @@ impl Universe {
         let size = width * height;
         let mut current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
-        let mut curr_active = AHashSet::with_capacity(size);
-        let next_active = AHashSet::with_capacity(size);
+        let mut curr_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
+        let next_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
 
         for i in 0..size {
             let state = i % scarcity == 0;
@@ -356,8 +356,8 @@ impl Pattern {
         let size = (width * height) as usize;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(0);
-        let c = AHashSet::with_capacity(0);
-        let n = AHashSet::with_capacity(0);
+        let c = FxHashSet::with_capacity_and_hasher(0, Default::default());
+        let n = FxHashSet::with_capacity_and_hasher(0, Default::default());
         
         Pattern { width, height, buffers: [current, next], active_cell_buffers: [c, n], curr_index: 0 }
     }
