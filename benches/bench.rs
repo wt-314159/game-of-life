@@ -7,7 +7,7 @@ extern crate game_of_life;
 #[allow(dead_code)]
 fn tick_benchmark(c: &mut Criterion) {
     let (width, height) = (800, 800);
-    let mut universe = game_of_life::Universe::new(width, height);
+    let mut universe = game_of_life::Universe::new_sparse(width, height);
 
     c.bench_function(
         "tick", 
