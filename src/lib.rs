@@ -166,10 +166,10 @@ impl Universe {
         let next_index = 1 - self.curr_index;
         let (width, height) = (self.width, self.height);
         unsafe {
-            let current = self.buffers.as_ptr().add(self.curr_index) as *const FixedBitSet;
+            let current = self.buffers.as_mut_ptr().add(self.curr_index) as *mut FixedBitSet;
             let next = self.buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
-            let curr_active = self.active_cell_buffers.as_ptr().add(self.curr_index) as *mut HashSet<usize>;
-            let next_active = self.active_cell_buffers.as_ptr().add(next_index) as *mut HashSet<usize>;
+            let curr_active = self.active_cell_buffers.as_mut_ptr().add(self.curr_index) as *mut HashSet<usize>;
+            let next_active = self.active_cell_buffers.as_mut_ptr().add(next_index) as *mut HashSet<usize>;
 
             for active in (*curr_active).drain() {
                 let cell = (*current).contains_unchecked(active);
@@ -190,9 +190,13 @@ impl Universe {
 
                 if live {
                     (*next_active).insert(active);
-                    Self::insert_neighbours(&mut (*next_active), active, width, height);
+                    for n in neighbours {
+                        (*next_active).insert(n);
+                    }
                 }
             }
+
+            (*current).clear();
         }
         self.curr_index = next_index;
     }
@@ -593,5 +597,31 @@ mod tests {
         for i in 0..expected_indices.len() {
             assert_eq!(expected_indices[i], indices[i]);
         }
+    }
+
+    #[test]
+    fn test_get_neighbour_array() {
+        let indices = Universe::get_neighbour_array(0, 4, 3);
+
+        let expected_indices = [11, 8, 9, 3, 1, 7, 4, 5];
+
+        assert_eq!(expected_indices, indices);
+    }
+
+    #[test]
+    fn test_count_neighbours() {
+        let (width, height) = (20, 30);
+        let universe = Universe::new_sparse(width, height, 3);
+        let (width, height) = (width as usize, height as usize);
+
+        let expected_count = universe.index_neighbour_count(0);
+        
+        let mut count = 0;
+        let cells = universe.get_cells();
+        for i in Universe::get_neighbour_array(0, width, height) {
+            count += cells.contains(i) as u8;
+        }
+
+        assert_eq!(expected_count, count);
     }
 }
