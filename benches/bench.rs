@@ -41,7 +41,7 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
             |b, &index| b.iter(
                 || {
                     // use 'max' to iterate over iterator
-                    let max = game_of_life::Universe::get_neighbours(black_box(index), width, height).max();
+                    let _max = game_of_life::Universe::get_neighbours(black_box(index), width, height).max();
                     universe.index_neighbour_count(black_box(index));
                 }
             ));
@@ -51,15 +51,15 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
             index, 
             |b, &index| b.iter(
                 || {
-                    let mut count = 0;
+                    let mut _count = 0;
                     let indices = game_of_life::Universe::get_neighbour_array(index, width, height);
                     unsafe {
                         // counting live neighbours from vec
                         for i in indices.iter() {
-                            count += cells.contains_unchecked(black_box(*i)) as u8;
+                            _count += cells.contains_unchecked(black_box(*i)) as u8;
                         }
                         // simulating iterating through vec again to add to active cells
-                        let max = indices.iter().max();
+                        let _max = indices.iter().max();
                     }
                 }
             ));
@@ -71,10 +71,10 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
                 || {
                     let indices = game_of_life::Universe::get_neighbour_array(index, width, height);
                     unsafe {
-                        let count = indices.iter()
+                        let _count = indices.iter()
                             .filter(|&&i| cells.contains_unchecked(black_box(i)))
                             .count();
-                        let max = indices.iter().max();
+                        let _max = indices.iter().max();
                     }
                 }
             ));
@@ -97,5 +97,5 @@ fn bench_get_neighbours(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, live_neighbours_benchmark);
+criterion_group!(benches, tick_benchmark);
 criterion_main!(benches);

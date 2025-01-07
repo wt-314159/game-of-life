@@ -71,11 +71,6 @@ impl Universe {
         }
     }
 
-    #[inline(always)]
-    fn other_index(index: usize) -> usize {
-        if index == 0 { 1 } else { 0 }
-    }
-
     fn insert_neighbours(active_cells: &mut HashSet<usize>, index: usize, width: usize, height: usize) {
         for i in Self::get_neighbours(index, width, height) {
             active_cells.insert(i);
@@ -147,30 +142,34 @@ impl Universe {
 
     pub fn tick(&mut self) {
         let next_index = 1 - self.curr_index;
+        let (width, height) = (self.width, self.height);
         unsafe {
             let current = self.buffers.as_ptr().add(self.curr_index) as *const FixedBitSet;
             let next = self.buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
-            let curr_active = self.buffers.as_ptr().add(self.curr_index) as *mut HashSet<usize>;
-            let next_active = self.buffers.as_ptr().add(next_index) as *mut HashSet<usize>;
-            let len = (*current).len();
+            let curr_active = self.active_cell_buffers.as_ptr().add(self.curr_index) as *mut HashSet<usize>;
+            let next_active = self.active_cell_buffers.as_ptr().add(next_index) as *mut HashSet<usize>;
 
             for active in (*curr_active).drain() {
                 let cell = (*current).contains_unchecked(active);
-            }
-            for idx in 0..len {
-                let cell = (*current).contains_unchecked(idx);
-                    let live_neighbours = self.index_neighbour_count(idx);
+                let neighbours = Self::get_neighbour_array(active, width, height);
 
-                    (*next).set_unchecked(idx, match(cell, live_neighbours) {
-                        //Live cells with less than 2 neighbours die, underpopulation
-                        (true, x) if x < 2 => false,
-                        // Live cells with more than 3 neighbours die, overpopulation
-                        (true, x) if x > 3 => false,
-                        // Dead cells with 3 neighbours become alive, reproduction
-                        (false, 3) => true,
-                        // All other cells remain in same state
-                        (other, _) => other
-                    });
+                let mut live_neighbours = 0;
+                for &idx in neighbours.iter() {
+                    live_neighbours += (*current).contains_unchecked(idx) as u8;
+                }
+
+                let live = match(cell, live_neighbours) {
+                    (true, x) if x < 2 => false,
+                    (true, x) if x > 3 => false,
+                    (false, 3) => true,
+                    (other, _) => other
+                };
+                (*next).set_unchecked(active, live);
+
+                if live {
+                    (*next_active).insert(active);
+                    Self::insert_neighbours(&mut (*next_active), active, width, height);
+                }
             }
         }
         self.curr_index = next_index;
