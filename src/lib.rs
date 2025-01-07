@@ -14,6 +14,7 @@ use web_sys::console;
 use wasm_bindgen::prelude::*;
 use std:: {
     cmp::min,
+    collections::HashSet,
     fmt,
 };
 
@@ -30,7 +31,7 @@ pub struct Universe {
     width: usize,
     height: usize,
     buffers: [FixedBitSet; 2],
-    #[allow(dead_code)]
+    active_cell_buffers: [HashSet<usize>; 2],
     curr_index: usize
 }
 
@@ -74,6 +75,12 @@ impl Universe {
     fn other_index(index: usize) -> usize {
         if index == 0 { 1 } else { 0 }
     }
+
+    fn insert_neighbours(active_cells: &mut HashSet<usize>, index: usize, width: usize, height: usize) {
+        for i in Self::get_neighbours(index, width, height) {
+            active_cells.insert(i);
+        }
+    }
 }
 
 // Public methods, exposed to JavaScript via bindgen
@@ -86,8 +93,10 @@ impl Universe {
         let size = width * height;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size); 
+        let curr_active = HashSet::with_capacity(size);
+        let next_active = HashSet::with_capacity(size);
 
-        Universe { width, height, buffers: [current, next], curr_index: 0 }
+        Universe { width, height, buffers: [current, next], active_cell_buffers: [curr_active, next_active], curr_index: 0 }
     }
 
     pub fn new_rand(width: u32, height: u32) -> Universe {
@@ -97,13 +106,17 @@ impl Universe {
         let size = width * height;
         let mut current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
+        let mut curr_active = HashSet::with_capacity(size);
+        let next_active = HashSet::with_capacity(size);
 
         for i in 0..size{
             let state = js_sys::Math::random() < 0.5;
             current.set(i, state);
+            curr_active.insert(i);
+            Self::insert_neighbours(&mut curr_active, i, width, height);
         }
         
-        Universe { width, height, buffers: [current, next], curr_index: 0 }
+        Universe { width, height, buffers: [current, next], active_cell_buffers: [curr_active, next_active], curr_index: 0 }
     }
 
     pub fn width(&self) -> u32 {
@@ -137,8 +150,13 @@ impl Universe {
         unsafe {
             let current = self.buffers.as_ptr().add(self.curr_index) as *const FixedBitSet;
             let next = self.buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
+            let curr_active = self.buffers.as_ptr().add(self.curr_index) as *mut HashSet<usize>;
+            let next_active = self.buffers.as_ptr().add(next_index) as *mut HashSet<usize>;
             let len = (*current).len();
 
+            for active in (*curr_active).drain() {
+                let cell = (*current).contains_unchecked(active);
+            }
             for idx in 0..len {
                 let cell = (*current).contains_unchecked(idx);
                     let live_neighbours = self.index_neighbour_count(idx);
@@ -200,6 +218,32 @@ impl Universe {
             let idx = Self::get_index(self.width, row, col);
             self.buffers[self.curr_index].set(idx, true);
         }
+    }
+
+    pub fn get_neighbour_array(index: usize, width: usize, height: usize) -> [usize; 8] {
+        let row = index / width;
+        let col = index % width;
+
+        let north = if row == 0 { height - 1 } else { row - 1 };
+        let west = if col == 0 { width - 1 } else { col - 1 };
+        let east = if col == width - 1 { 0 } else { col + 1 };
+        let south = if row == height - 1 { 0 } else { row + 1 };
+
+        let north_row_idx = width * north;
+        let row_idx = width * row;
+        let south_row_idx = width * south;
+
+        let indices = [
+            north_row_idx + west,
+            north_row_idx + col,
+            north_row_idx + east,
+            row_idx + west,
+            row_idx + east,
+            south_row_idx + west,
+            south_row_idx + col, 
+            south_row_idx + east
+        ];
+        indices
     }
 
     pub fn get_neighbours(index: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
@@ -280,8 +324,9 @@ impl Pattern {
         let size = (width * height) as usize;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(0);
+        let (c, n) = (HashSet::with_capacity(0), HashSet::with_capacity(0));
         
-        Pattern { width, height, buffers: [current, next], curr_index: 0 }
+        Pattern { width, height, buffers: [current, next], active_cell_buffers: [c, n], curr_index: 0 }
     }
 
     // Constructor methods for simple oscillators

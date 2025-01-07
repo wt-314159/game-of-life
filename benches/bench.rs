@@ -20,6 +20,7 @@ fn tick_benchmark(c: &mut Criterion) {
 fn live_neighbours_benchmark(c: &mut Criterion) {
     let (width, height) = (200, 200);
     let universe = game_of_life::Universe::new(width, height);
+    let cells = universe.get_cells();
     #[allow(unused_variables)]
     let (width, height) = (width as usize, height as usize);
 
@@ -34,7 +35,49 @@ fn live_neighbours_benchmark(c: &mut Criterion) {
             )
         );
 
-        
+        group.bench_with_input(
+            BenchmarkId::new("separate get neighbours and count neighbours", index), 
+            index, 
+            |b, &index| b.iter(
+                || {
+                    // use 'max' to iterate over iterator
+                    let max = game_of_life::Universe::get_neighbours(black_box(index), width, height).max();
+                    universe.index_neighbour_count(black_box(index));
+                }
+            ));
+
+        group.bench_with_input(
+            BenchmarkId::new("combined get and count neighbours", index), 
+            index, 
+            |b, &index| b.iter(
+                || {
+                    let mut count = 0;
+                    let indices = game_of_life::Universe::get_neighbour_array(index, width, height);
+                    unsafe {
+                        // counting live neighbours from vec
+                        for i in indices.iter() {
+                            count += cells.contains_unchecked(black_box(*i)) as u8;
+                        }
+                        // simulating iterating through vec again to add to active cells
+                        let max = indices.iter().max();
+                    }
+                }
+            ));
+
+        group.bench_with_input(
+            BenchmarkId::new("counting with filer", index), 
+            index,
+            |b, &index| b.iter(
+                || {
+                    let indices = game_of_life::Universe::get_neighbour_array(index, width, height);
+                    unsafe {
+                        let count = indices.iter()
+                            .filter(|&&i| cells.contains_unchecked(black_box(i)))
+                            .count();
+                        let max = indices.iter().max();
+                    }
+                }
+            ));
     }
     group.finish();
 }
@@ -54,5 +97,5 @@ fn bench_get_neighbours(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, tick_benchmark);
+criterion_group!(benches, live_neighbours_benchmark);
 criterion_main!(benches);
