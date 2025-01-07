@@ -180,23 +180,21 @@ impl Universe {
                     live_neighbours += (*current).contains_unchecked(idx) as u8;
                 }
 
-                let live = match(cell, live_neighbours) {
-                    (true, x) if x < 2 => false,
-                    (true, x) if x > 3 => false,
-                    (false, 3) => true,
-                    (other, _) => other
+                let (live, changed) = match(cell, live_neighbours) {
+                    (true, x) if x < 2 => (false, true),
+                    (true, x) if x > 3 => (false, true),
+                    (false, 3) => (true, true),
+                    (other, _) => (other, false)
                 };
                 (*next).set_unchecked(active, live);
 
-                if live {
+                if changed {
                     (*next_active).insert(active);
                     for n in neighbours {
                         (*next_active).insert(n);
                     }
                 }
             }
-
-            (*current).clear();
         }
         self.curr_index = next_index;
     }
