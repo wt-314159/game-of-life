@@ -6,7 +6,6 @@ extern crate web_sys;
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 
-use rustc_hash::FxHashSet;
 #[allow(unused_imports)]
 use timer::Timer;
 #[allow(unused_imports)]
@@ -15,7 +14,6 @@ use web_sys::console;
 use wasm_bindgen::prelude::*;
 use std:: {
     cmp::min,
-    collections::HashSet,
     fmt,
 };
 
