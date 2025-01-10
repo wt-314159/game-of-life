@@ -137,7 +137,7 @@ impl Universe {
         Universe { width, height, buffers: [current, next], active_cell_buffers: [curr_active, next_active], curr_index: 0 }
     }
 
-    pub fn new_oscillators(width: u32, height: u32) -> Universe {
+    pub fn new_oscillators(width: u32, height: u32, spacing: u32) -> Universe {
         // Enable logging for panics
         utils::set_panic_hook();
         let (w, h) = (width as usize, height as usize);
@@ -152,9 +152,11 @@ impl Universe {
 
         let pattern = Pattern::blinker();
 
-        if width > 10 && height > 10 {
-            for row in (0..height).step_by(10) {
-                for column in (0..width).step_by(10) {
+        if width > spacing && height > spacing {
+            let spacing = spacing as usize;
+            
+            for row in (0..height).step_by(spacing) {
+                for column in (0..width).step_by(spacing) {
                     universe.insert_pattern(&pattern, row, column, 0);
                 }
             }
