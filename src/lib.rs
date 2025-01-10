@@ -123,6 +123,30 @@ impl Universe {
         Universe { width, height, buffers: [current, next], curr_index: 0 }
     }
 
+    pub fn new_oscillators(width: u32, height: u32) -> Universe {
+        // Enable logging for panics
+        utils::set_panic_hook();
+        let (w, h) = (width as usize, height as usize);
+        let size = w * h;
+        let mut current = FixedBitSet::with_capacity(size);
+        let next = FixedBitSet::with_capacity(size);
+        
+        let mut universe = Universe 
+        { width: w, height: h, buffers: [current, next], curr_index: 0 };
+
+        let pattern = Pattern::blinker();
+
+        if width > 10 && height > 10 {
+            for row in (0..height).step_by(10) {
+                for column in (0..width).step_by(10) {
+                    universe.insert_pattern(&pattern, row, column, 0);
+                }
+            }
+        }
+
+        universe
+    }
+
     pub fn width(&self) -> u32 {
         self.width as u32
     }
