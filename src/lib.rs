@@ -219,7 +219,7 @@ impl Universe {
 
                 if changed {
                     (*next_active).insert_unchecked(idx);
-                    for n in neighbours {
+                    for &n in neighbours.iter() {
                         (*next_active).insert_unchecked(n);
                     }
                 }
