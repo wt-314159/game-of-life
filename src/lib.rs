@@ -32,7 +32,7 @@ pub struct Universe {
     width: usize,
     height: usize,
     buffers: [FixedBitSet; 2],
-    active_cell_buffers: [FxHashSet<usize>; 2],
+    active_cell_buffers: [FixedBitSet; 2],
     curr_index: usize
 }
 
@@ -72,9 +72,11 @@ impl Universe {
         }
     }
 
-    fn insert_neighbours(active_cells: &mut FxHashSet<usize>, index: usize, width: usize, height: usize) {
-        for i in Self::get_neighbours(index, width, height) {
-            active_cells.insert(i);
+    fn insert_neighbours(active_cells: &mut FixedBitSet, index: usize, width: usize, height: usize) {
+        unsafe {
+            for i in Self::get_neighbours(index, width, height) {
+                active_cells.insert_unchecked(i);
+            }
         }
     }
 }
@@ -89,8 +91,8 @@ impl Universe {
         let size = width * height;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size); 
-        let curr_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
-        let next_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
+        let curr_active = FixedBitSet::with_capacity(size);
+        let next_active = FixedBitSet::with_capacity(size);
 
         Universe { width, height, buffers: [current, next], active_cell_buffers: [curr_active, next_active], curr_index: 0 }
     }
@@ -102,8 +104,8 @@ impl Universe {
         let size = width * height;
         let mut current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
-        let mut curr_active =FxHashSet::with_capacity_and_hasher(size, Default::default());
-        let next_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
+        let mut curr_active = FixedBitSet::with_capacity(size);
+        let next_active = FixedBitSet::with_capacity(size);
 
         for i in 0..size{
             let state = js_sys::Math::random() < 0.25;
@@ -124,8 +126,8 @@ impl Universe {
         let size = width * height;
         let mut current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
-        let mut curr_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
-        let next_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
+        let mut curr_active = FixedBitSet::with_capacity(size);
+        let next_active = FixedBitSet::with_capacity(size);
 
         for i in 0..size {
             let state = i % scarcity == 0;
@@ -144,8 +146,8 @@ impl Universe {
         let size = w * h;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(size);
-        let curr_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
-        let next_active = FxHashSet::with_capacity_and_hasher(size, Default::default());
+        let curr_active = FixedBitSet::with_capacity(size);
+        let next_active = FixedBitSet::with_capacity(size);
         
         let mut universe = Universe 
         { width: w, height: h, buffers: [current, next], active_cell_buffers: [curr_active, next_active], curr_index: 0 };
@@ -154,7 +156,7 @@ impl Universe {
 
         if width > spacing && height > spacing {
             let spacing = spacing as usize;
-            
+
             for row in (0..height).step_by(spacing) {
                 for column in (0..width).step_by(spacing) {
                     universe.insert_pattern(&pattern, row, column, 0);
@@ -197,16 +199,20 @@ impl Universe {
         unsafe {
             let current = self.buffers.as_mut_ptr().add(self.curr_index) as *mut FixedBitSet;
             let next = self.buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
-            let curr_active = self.active_cell_buffers.as_mut_ptr().add(self.curr_index) as *mut HashSet<usize>;
-            let next_active = self.active_cell_buffers.as_mut_ptr().add(next_index) as *mut HashSet<usize>;
+            let curr_active = self.active_cell_buffers.as_mut_ptr().add(self.curr_index) as *mut FixedBitSet;
+            let next_active = self.active_cell_buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
+            let len = (*current).len();
 
-            for active in (*curr_active).drain() {
-                let cell = (*current).contains_unchecked(active);
-                let neighbours = Self::get_neighbour_array(active, width, height);
+            for idx in 0..len {
+                let active = (*curr_active).contains_unchecked(idx);
+                if !active { continue; }
+
+                let cell = (*current).contains_unchecked(idx);
+                let neighbours = Self::get_neighbour_array(idx, width, height);
 
                 let mut live_neighbours = 0;
-                for &idx in neighbours.iter() {
-                    live_neighbours += (*current).contains_unchecked(idx) as u8;
+                for &n in neighbours.iter() {
+                    live_neighbours += (*current).contains_unchecked(n) as u8;
                 }
 
                 let (live, changed) = match(cell, live_neighbours) {
@@ -215,10 +221,10 @@ impl Universe {
                     (false, 3) => (true, true),
                     (other, _) => (other, false)
                 };
-                (*next).set_unchecked(active, live);
+                (*next).set_unchecked(idx, live);
 
                 if changed {
-                    (*next_active).insert(active);
+                    (*next_active).insert(idx);
                     for n in neighbours {
                         (*next_active).insert(n);
                     }
@@ -384,8 +390,8 @@ impl Pattern {
         let size = (width * height) as usize;
         let current = FixedBitSet::with_capacity(size);
         let next = FixedBitSet::with_capacity(0);
-        let c = FxHashSet::with_capacity_and_hasher(0, Default::default());
-        let n = FxHashSet::with_capacity_and_hasher(0, Default::default());
+        let c = FixedBitSet::with_capacity(0);
+        let n = FixedBitSet::with_capacity(0);
         
         Pattern { width, height, buffers: [current, next], active_cell_buffers: [c, n], curr_index: 0 }
     }
