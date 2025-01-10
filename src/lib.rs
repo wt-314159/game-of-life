@@ -199,12 +199,8 @@ impl Universe {
             let next = self.buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
             let curr_active = self.active_cell_buffers.as_mut_ptr().add(self.curr_index) as *mut FixedBitSet;
             let next_active = self.active_cell_buffers.as_mut_ptr().add(next_index) as *mut FixedBitSet;
-            let len = (*current).len();
 
-            for idx in 0..len {
-                let active = (*curr_active).contains_unchecked(idx);
-                if !active { continue; }
-
+            for idx in (*curr_active).ones() {
                 let cell = (*current).contains_unchecked(idx);
                 let neighbours = Self::get_neighbour_array(idx, width, height);
 
