@@ -224,9 +224,9 @@ impl Universe {
                 (*next).set_unchecked(idx, live);
 
                 if changed {
-                    (*next_active).insert(idx);
+                    (*next_active).insert_unchecked(idx);
                     for n in neighbours {
-                        (*next_active).insert(n);
+                        (*next_active).insert_unchecked(n);
                     }
                 }
             }
