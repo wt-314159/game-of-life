@@ -344,10 +344,10 @@ patternSelect.addEventListener("change", event => {
 
 // Event listener for canvas, to toggle cells
 foreCanvas.addEventListener("click", event => {
-    const boundingRect = gameCanvas.getBoundingClientRect();
+    const boundingRect = foreCanvas.getBoundingClientRect();
     // Convert the page relative click coordinates to canvas relative
-    const scaleX = gameCanvas.width / boundingRect.width;
-    const scaleY = gameCanvas.height / boundingRect.height;
+    const scaleX = foreCanvas.width / boundingRect.width;
+    const scaleY = foreCanvas.height / boundingRect.height;
 
     const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
     const canvasTop = (event.clientY - boundingRect.top) * scaleY;

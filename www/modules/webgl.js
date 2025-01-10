@@ -79,12 +79,11 @@ function drawCellsFrame(width, height, cells, cellSize, cellBorderSize) {
     let idx = 0;
     for (let row = 0; row < height; row++) {
         for (let col = 0; col < width; col++) {
-            idx += 1;
-            
             instanceColors[idx] = bitIsSet(idx, cells) ? 1 : 0;
             let doubleIdx = idx * 2;
             instancePositions[doubleIdx] = col * cellBorderSize + 1;
             instancePositions[doubleIdx + 1] = row * cellBorderSize + 1;
+            idx += 1;
         }
     }
 
