@@ -30,7 +30,7 @@ features = [
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"
-criterion = { version = "0.5.1", features = ["html_reports"] }
+criterion = { version = "0.8.2", features = ["html_reports"] }
 
 [[bench]]
 name = "bench"
